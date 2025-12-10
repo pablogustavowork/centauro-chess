@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Centauro Chess - Visor de Partidas PGN</title>
+    <!-- Carga de Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Estilos personalizados para el tablero (ajustar tamaño en móvil) */
+        #board {
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        /* Garantiza que el tablero sea responsivo */
+        .board-container {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 1rem;
+            min-height: 50vh;
+            /* Ajuste para centrar verticalmente si no hay mucho contenido */
+        }
+
+        /* Estilo para el contenedor del tablero de chessboard.js */
+        .square-55d63 {
+            position: relative;
+        }
+
+        /* Sombra y estilo para botones */
+        .chess-button {
+            transition: all 0.1s;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+        }
+
+        .chess-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 10px -1px rgba(0, 0, 0, 0.15), 0 4px 6px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .chess-button:active {
+            transform: translateY(0);
+            box-shadow: none;
+        }
+    </style>
+    <!-- Fuentes: Inter para una estética moderna -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        'chess-dark': '#4f46e5', /* Indigo */
+                        'chess-light': '#818cf8', /* Light Indigo */
+                        'board-light': '#f0d9b5',
+                        'board-dark': '#b58863',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body class="bg-gray-100 min-h-screen">
+
+    <!-- Dependencias de Ajedrez -->
+    <!-- FIX: Agregamos jQuery, ya que chessboard.js 1.0.0 lo requiere como dependencia -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+        integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+
+    <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+    <script src="https://unpkg.com/chess.js@0.10.3/chess.js"></script>
+
+    <div class="container mx-auto p-4 md:p-8">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">
+            ♟️ Centauro Chess: Visor PGN
+        </h1>
+
+        <!-- Contenedor de Carga PGN -->
+        <div class="bg-white p-6 rounded-xl shadow-lg mb-8 max-w-2xl mx-auto">
+            <h2 class="text-xl font-semibold text-gray-700 mb-4">Cargar Partida PGN</h2>
+            <textarea id="pgn-input" rows="6"
+                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-chess-dark focus:border-chess-dark resize-none"
+                placeholder="Pega el texto de la partida PGN aquí, o carga un archivo.&#10;Ejemplo: [Event 'WCh 2021'] 1. d4 Nf6 2. c4 e6 3. Nf3 d5 4. g3 dxc4 5. Bg2 b5 6. Ne5 c6 7. Nxc6 Qb6 ..."></textarea>
+
+            <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 mt-4">
+                <button onclick="loadPgnText()"
+                    class="w-full sm:w-1/2 bg-chess-dark text-white font-semibold py-3 rounded-lg chess-button hover:bg-indigo-700">
+                    Cargar PGN desde Texto
+                </button>
+                <label for="pgn-file-input"
+                    class="w-full sm:w-1/2 text-center bg-gray-200 text-gray-700 font-semibold py-3 rounded-lg cursor-pointer chess-button hover:bg-gray-300">
+                    Cargar PGN desde Archivo
+                </label>
+                <input type="file" id="pgn-file-input" accept=".pgn" style="display: none;"
+                    onchange="loadPgnFile(event)">
+            </div>
+
+            <p id="error-message" class="text-red-500 mt-3 hidden text-center"></p>
+        </div>
+
+        <!-- Contenedor Principal del Visor -->
+        <div class="bg-white p-6 rounded-xl shadow-lg max-w-2xl mx-auto">
+            <div class="board-container">
+                <div id="board" class="shadow-xl rounded-lg"></div>
+            </div>
+
+            <!-- Información y Controles de Navegación -->
+            <div id="controls" class="mt-6">
+                <div class="flex justify-center items-center space-x-2 mb-4">
+                    <p class="text-gray-700 font-medium">Movimiento Actual:</p>
+                    <p id="move-counter" class="font-bold text-lg text-chess-dark">0 / 0</p>
+                </div>
+
+                <div class="flex justify-center space-x-3 sm:space-x-6">
+                    <button id="start-btn"
+                        class="chess-button bg-gray-200 text-gray-700 p-3 rounded-full hover:bg-gray-300 transition"
+                        onclick="goToStart()" title="Inicio">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M11 19l-7-7 7-7m8 14l-7-7 7-7"></path>
+                        </svg>
+                    </button>
+                    <button id="prev-btn"
+                        class="chess-button bg-gray-200 text-gray-700 p-3 rounded-full hover:bg-gray-300 transition"
+                        onclick="goBack()" title="Anterior">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7">
+                            </path>
+                        </svg>
+                    </button>
+                    <button id="next-btn"
+                        class="chess-button bg-chess-dark text-white p-3 rounded-full hover:bg-indigo-700 transition"
+                        onclick="goForward()" title="Siguiente">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7">
+                            </path>
+                        </svg>
+                    </button>
+                    <button id="end-btn"
+                        class="chess-button bg-gray-200 text-gray-700 p-3 rounded-full hover:bg-gray-300 transition"
+                        onclick="goToEnd()" title="Final">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M13 5l7 7-7 7M5 5l7 7-7 7"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Historial de Movimientos -->
+                <div class="mt-6 p-4 border rounded-lg bg-gray-50 max-h-48 overflow-y-auto">
+                    <h3 class="font-semibold mb-2 text-gray-700">Historial de Movimientos:</h3>
+                    <p id="move-history" class="text-sm text-gray-600 font-mono"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Variables globales para el juego y el tablero
+        let game = new Chess();
+        let board = null;
+        let moves = [];
+        let currentMoveIndex = -1;
+        const errorMessageDiv = document.getElementById('error-message');
+
+        // Inicializa el tablero
+        function initBoard() {
+            // Utilizamos 'window.Chessboard' ya que la librería es cargada globalmente
+            const config = {
+                pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
+                draggable: false, // Desactivar arrastre ya que es solo un visor
+                position: 'start'
+            };
+            board = Chessboard('board', config);
+
+            // Ajustar el tamaño del tablero al contenedor después de la inicialización
+            const resizeObserver = new ResizeObserver(entries => {
+                for (let entry of entries) {
+                    const size = entry.contentRect.width;
+                    board.resize(size);
+                }
+            });
+            resizeObserver.observe(document.getElementById('board'));
+
+            // Inicializa los contadores
+            updateMoveCounter();
+        }
+
+        // Carga la partida desde el texto de la caja de texto
+        function loadPgnText() {
+            const pgnText = document.getElementById('pgn-input').value;
+            loadGame(pgnText);
+        }
+
+        // Carga la partida desde un archivo subido
+        function loadPgnFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                loadGame(e.target.result);
+            };
+            reader.readAsText(file);
+        }
+
+        // Lógica principal para cargar el PGN
+        function loadGame(pgn) {
+            errorMessageDiv.classList.add('hidden');
+
+            // Resetear el juego y cargar el PGN
+            game.reset();
+            const success = game.load_pgn(pgn);
+
+            if (success) {
+                // Obtener todos los movimientos de la partida
+                moves = game.history();
+
+                // Reiniciar el juego a la posición inicial para mostrar los movimientos
+                game.reset();
+                currentMoveIndex = -1;
+                board.position(game.fen());
+
+                updateMoveCounter();
+                updateMoveHistory();
+            } else {
+                errorMessageDiv.textContent = 'Error: No se pudo cargar la partida PGN. Asegúrate de que el formato sea correcto.';
+                errorMessageDiv.classList.remove('hidden');
+
+                // Limpiar el tablero si falla la carga
+                game.reset();
+                moves = [];
+                currentMoveIndex = -1;
+                board.position('start');
+                updateMoveCounter();
+                updateMoveHistory();
+            }
+        }
+
+        // Actualiza el contador de movimientos y la posición en el tablero
+        function updateBoard() {
+            if (currentMoveIndex >= 0 && currentMoveIndex < moves.length) {
+                // Navegar movimiento por movimiento
+                const tempGame = new Chess();
+                tempGame.load_pgn(game.pgn());
+
+                // Aplicar todos los movimientos hasta el índice actual
+                tempGame.reset();
+                for (let i = 0; i <= currentMoveIndex; i++) {
+                    tempGame.move(moves[i]);
+                }
+                board.position(tempGame.fen());
+
+            } else {
+                // Posición inicial (antes del primer movimiento)
+                board.position('start');
+            }
+            updateMoveCounter();
+            updateMoveHistory();
+        }
+
+        // Navegación de la partida
+
+        function goForward() {
+            if (currentMoveIndex < moves.length - 1) {
+                currentMoveIndex++;
+                updateBoard();
+            }
+        }
+
+        function goBack() {
+            if (currentMoveIndex >= 0) {
+                currentMoveIndex--;
+                updateBoard();
+            }
+        }
+
+        function goToStart() {
+            currentMoveIndex = -1;
+            updateBoard();
+        }
+
+        function goToEnd() {
+            currentMoveIndex = moves.length - 1;
+            updateBoard();
+        }
+
+        // Actualiza el texto del contador de movimientos
+        function updateMoveCounter() {
+            document.getElementById('move-counter').textContent = `${currentMoveIndex + 1} / ${moves.length}`;
+
+            // Deshabilitar botones en los límites
+            document.getElementById('start-btn').disabled = currentMoveIndex <= -1;
+            document.getElementById('prev-btn').disabled = currentMoveIndex <= -1;
+            document.getElementById('next-btn').disabled = currentMoveIndex >= moves.length - 1;
+            document.getElementById('end-btn').disabled = currentMoveIndex >= moves.length - 1;
+        }
+
+        // Muestra el historial de movimientos de forma simple
+        function updateMoveHistory() {
+            if (moves.length === 0) {
+                document.getElementById('move-history').textContent = "Cargue una partida para ver el historial...";
+                return;
+            }
+
+            const pgn = game.pgn().replace(/(\[.*?\])/g, '').trim(); // Elimina etiquetas
+
+            // Resaltar el movimiento actual
+            let highlightedPgn = pgn.replace(/(\d+\.)\s*([^\s]+)/g, (match, moveNumber, move) => {
+                // Determina el índice de los movimientos en el array 'moves'
+                const moveNumberInt = parseInt(moveNumber.replace('.', ''));
+                const indexWhite = moveNumberInt * 2 - 2;
+                const indexBlack = moveNumberInt * 2 - 1;
+
+                let part1 = '';
+                if (moves[indexWhite]) {
+                    const isWhiteCurrent = indexWhite === currentMoveIndex;
+                    part1 = `<span ${isWhiteCurrent ? 'class="bg-yellow-300 rounded px-1 font-bold"' : ''}>${moveNumber} ${moves[indexWhite]}</span>`;
+                }
+
+                let part2 = '';
+                if (moves[indexBlack]) {
+                    const isBlackCurrent = indexBlack === currentMoveIndex;
+                    part2 = `<span ${isBlackCurrent ? 'class="bg-yellow-300 rounded px-1 font-bold"' : ''}>${moves[indexBlack]}</span>`;
+                }
+
+                // Devolvemos el número de movimiento seguido por los movimientos de Blancas y Negras
+                return `${part1} ${part2}`;
+            });
+
+            document.getElementById('move-history').innerHTML = highlightedPgn.trim();
+        }
+
+        // Inicializar el tablero cuando la ventana cargue
+        window.onload = initBoard;
+
+        // Añadir soporte para teclado (opcional, pero mejora UX)
+        document.addEventListener('keydown', function (event) {
+            if (moves.length > 0) {
+                if (event.key === 'ArrowRight') {
+                    goForward();
+                } else if (event.key === 'ArrowLeft') {
+                    goBack();
+                } else if (event.key === 'Home') {
+                    goToStart();
+                } else if (event.key === 'End') {
+                    goToEnd();
+                }
+            }
+        });
+
+    </script>
+</body>
+
+</html>

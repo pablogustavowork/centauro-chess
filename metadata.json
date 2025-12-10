@@ -1,0 +1,5 @@
+{
+  "name": "Centauro Chess",
+  "description": "Una plataforma híbrida de entrenamiento de ajedrez diseñada para acelerar el desarrollo del talento mediante análisis crítico de motor y entrenamiento bajo presión (El Gimnasio). Incluye análisis de PGN, seguimiento de CPL y problemas adaptativos con IA.",
+  "requestFramePermissions": []
+}
