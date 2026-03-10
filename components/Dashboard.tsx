@@ -1,227 +1,197 @@
 
 import React from 'react';
 import { UserProfile, GameData } from '../types';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { TrendingUp, Target, Upload, Play, Trophy, Eye } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area } from 'recharts';
+import { TrendingUp, Target, Upload, Play, Trophy, Eye, Clock, CheckCircle, ArrowRight, FlaskConical, Dumbbell } from 'lucide-react';
 
+import CPLTrendGraph from './CPLTrendGraph';
 
 interface DashboardProps {
   profile: UserProfile;
   history: GameData[];
-  onUploadClick: () => void; // Legacy
-  onTrainingClick: () => void; // Legacy (now reused/ignored)
+  onUploadClick: () => void;
+  onTrainingClick: () => void;
   onVisorClick: () => void;
   onDirectPgnLoad: (pgn: string, mode: 'analysis' | 'viewer') => void;
+  onReviewGame: (game: GameData) => void;
+  onTrainGame: (game: GameData) => void;
 }
 
+const Dashboard: React.FC<DashboardProps> = ({ profile, history, onUploadClick, onTrainingClick, onVisorClick, onDirectPgnLoad, onReviewGame, onTrainGame }) => {
 
-const Dashboard: React.FC<DashboardProps> = ({ profile, history, onUploadClick, onTrainingClick, onVisorClick, onDirectPgnLoad }) => {
-  // ... (chart data logic) ...
-  const [directPgn, setDirectPgn] = React.useState('');
+  // Mock Data for the slick graph
+  const trendData = history.length > 0
+    ? history.map((g, i) => ({ name: `J${i + 1}`, cpl: g.averageCpl }))
+    : [
+      { name: 'SEM 1', cpl: 35 }, { name: 'SEM 2', cpl: 28 }, { name: 'SEM 3', cpl: 22 },
+      { name: 'SEM 4', cpl: 18 }, { name: 'SEM 5', cpl: 12 }, { name: 'HOY', cpl: 9.5 } // Data matching image curve better
+    ];
 
-  const handleDirectFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      if (event.target?.result) setDirectPgn(event.target.result as string);
-    };
-    reader.readAsText(file);
-  };
-
-  // Mock trend data if history is empty
-  const data = history.length > 0 ? history.map((g, i) => ({
-    name: `Partida ${i + 1}`,
-    cpl: g.averageCpl
-  })) : [
-    { name: 'P1', cpl: 65 }, { name: 'P2', cpl: 58 }, { name: 'P3', cpl: 72 },
-    { name: 'P4', cpl: 45 }, { name: 'P5', cpl: 40 }
-  ];
-
-  const recentError = history.length > 0 ? history[history.length - 1].dominantError : 'Datos insuficientes';
-
+  const currentCpl = history.length > 0 ? history[history.length - 1].averageCpl : 18.5; // Example value from image
+  const improvement = "-12%"; // Example value from image
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-8">
-      {/* ... Header ... */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="p-8 max-w-[1600px] mx-auto space-y-8 animate-in fade-in">
+
+      {/* Header */}
+      <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-white">Bienvenido de nuevo, {profile.name}</h1>
-          <p className="text-slate-400">ELO Actual: <span className="text-green-400 font-mono font-bold">{profile.elo}</span></p>
+          <h1 className="text-4xl font-black text-white tracking-tight mb-2">Panel de Control</h1>
+          <p className="text-slate-400 text-lg">Bienvenido de nuevo, revisa tu progreso y continúa tu entrenamiento.</p>
         </div>
-        <button className="hidden md:block opacity-0 cursor-default" aria-hidden="true"></button>
+        <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700 text-slate-400 hover:text-white cursor-pointer transition-colors">
+          <span className="text-xl">🔔</span>
+        </div>
       </div>
 
-
-      {/* Actions Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-
-        {/* Card 1: Analysis (Green) */}
-        <button
-          onClick={onUploadClick}
-          className="group relative h-80 bg-slate-800 rounded-2xl border border-slate-700 p-8 text-left hover:border-green-500 transition-all hover:shadow-[0_0_30px_rgba(34,197,94,0.1)]"
-        >
-          <div className="absolute top-8 right-8 bg-green-900/20 p-4 rounded-xl group-hover:scale-110 transition-transform">
-            <Upload className="w-8 h-8 text-green-500" />
-          </div>
-          <div className="h-full flex flex-col justify-end">
-            <h3 className="text-2xl font-bold text-white mb-2 group-hover:text-green-400 transition-colors">Analizar Nueva Partida</h3>
-            <p className="text-slate-400">Ir a la pantalla completa de carga para análisis profundo con Stockfish 16.</p>
-          </div>
-        </button>
-
-        {/* Card 2: Direct Load (Blue) - Interactive */}
-        <div className="relative h-80 bg-slate-800 rounded-2xl border border-slate-700 p-6 flex flex-col gap-4 hover:border-blue-500 transition-all hover:shadow-[0_0_30px_rgba(59,130,246,0.1)]">
-          <div className="absolute top-6 right-6 bg-blue-900/20 p-3 rounded-xl">
-            <Upload className="w-6 h-6 text-blue-500" />
-          </div>
-
-          <h3 className="text-xl font-bold text-white text-blue-400">Carga Rápida</h3>
-
-          <textarea
-            className="flex-1 w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-xs font-mono text-slate-300 resize-none focus:ring-1 focus:ring-blue-500 outline-none"
-            placeholder="Pega PGN aquí..."
-            value={directPgn}
-            onChange={(e) => setDirectPgn(e.target.value)}
-          />
-
-          <div className="grid grid-cols-2 gap-2">
-            <label className="cursor-pointer bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold py-2 rounded-lg text-center transition-colors flex items-center justify-center gap-1">
-              <span className="truncate">📂 Archivo</span>
-              <input type="file" accept=".pgn" onChange={handleDirectFile} className="hidden" />
-            </label>
-            <button
-              onClick={() => setDirectPgn('')}
-              className="bg-slate-700 hover:bg-red-900/50 text-slate-300 hover:text-red-400 text-xs font-bold py-2 rounded-lg transition-colors"
-              disabled={!directPgn}
-            >
-              Limpiar
-            </button>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={() => onDirectPgnLoad(directPgn, 'analysis')}
-              disabled={!directPgn}
-              className="bg-green-600 hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold py-2 rounded-lg transition-colors"
-            >
-              Analizar
-            </button>
-            <button
-              onClick={() => onDirectPgnLoad(directPgn, 'viewer')}
-              disabled={!directPgn}
-              className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold py-2 rounded-lg transition-colors"
-            >
-              Ver
-            </button>
-          </div>
-        </div>
-
-
-        {/* Visor PGN Button */}
-        <button
-          onClick={onVisorClick}
-          className="group relative h-64 bg-slate-800 rounded-2xl border border-slate-700 p-8 text-left hover:border-indigo-500 transition-all hover:shadow-[0_0_30px_rgba(99,102,241,0.1)] md:col-span-2 lg:col-span-1"
-        >
-          <div className="absolute top-8 right-8 bg-indigo-900/20 p-4 rounded-xl group-hover:scale-110 transition-transform">
-            <Eye className="w-8 h-8 text-indigo-500" />
-          </div>
-          <div className="h-full flex flex-col justify-end">
-            <h3 className="text-2xl font-bold text-white mb-2 group-hover:text-indigo-400 transition-colors">Visor PGN</h3>
-            <p className="text-slate-400">Carga y reproduce partidas libremente sin análisis. Ideal para revisión rápida.</p>
-          </div>
-        </button>
-      </div>
-
-      {/* Main Grid */}
+      {/* Top Row: Metrics & Graph */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* Chart */}
-        <div className="lg:col-span-2 bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-xl">
-          <div className="flex items-center gap-2 mb-6">
-            <TrendingUp className="w-5 h-5 text-green-400" />
-            <h2 className="text-xl font-bold text-white">Tendencia de Precisión (ACPL)</h2>
-          </div>
-          <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={data}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                <XAxis dataKey="name" stroke="#94a3b8" />
-                <YAxis stroke="#94a3b8" />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569', borderRadius: '8px' }}
-                  labelStyle={{ color: '#94a3b8' }}
-                />
-                <Line type="monotone" dataKey="cpl" stroke="#22c55e" strokeWidth={3} dot={{ r: 4, fill: '#22c55e' }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+        {/* Main Graph Card */}
+        <div className="lg:col-span-2">
+          <CPLTrendGraph data={trendData} currentCpl={currentCpl} improvement={improvement} />
         </div>
 
-        {/* Daily Rec */}
-        <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-xl flex flex-col">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="p-4 bg-green-900/20 rounded-lg">
-              <Trophy className="w-8 h-8 text-green-500" />
-            </div>
-            <h2 className="text-xl font-bold text-white">Enfoque Diario</h2>
-          </div>
-
-          <div className="flex-1 flex flex-col justify-center items-center text-center space-y-4">
-            <div className="bg-slate-900 p-4 rounded-full border-2 border-slate-700">
-              <span className="text-3xl">🎯</span>
+        {/* Side KPIs */}
+        <div className="space-y-6">
+          {/* Problems Solved */}
+          <div className="bg-slate-900 rounded-3xl p-6 border border-slate-800 flex flex-col justify-between h-[154px] relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-32 bg-orange-500/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 bg-orange-500/20 rounded-lg text-orange-500"><Target className="w-5 h-5" /></div>
+              <span className="text-slate-300 font-bold">Problemas Resueltos</span>
             </div>
             <div>
-              <p className="text-slate-400 text-sm uppercase tracking-wider">Debilidad Identificada</p>
-              <h3 className="text-xl font-bold text-white mt-1">{recentError}</h3>
+              <div className="text-4xl font-black text-white">1,248</div>
+              <div className="text-sm text-slate-500 mt-1">+12 hoy</div>
             </div>
-            <p className="text-sm text-slate-500 px-4">
-              Basado en tus últimas {history.length || 5} partidas, recomendamos ejercicios tácticos enfocados en esta área.
-            </p>
           </div>
 
-          <button
-            onClick={onTrainingClick}
-            className="w-full mt-6 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-400 hover:to-red-500 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-all shadow-lg shadow-orange-900/20">
-            <Play className="w-4 h-4 fill-current" /> Iniciar Entrenamiento
-          </button>
+          {/* Study Time */}
+          <div className="bg-slate-900 rounded-3xl p-6 border border-slate-800 flex flex-col justify-between h-[154px] relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-32 bg-purple-500/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 bg-purple-500/20 rounded-lg text-purple-500"><Clock className="w-5 h-5" /></div>
+              <span className="text-slate-300 font-bold">Tiempo de Estudio</span>
+            </div>
+            <div>
+              <div className="text-4xl font-black text-white">42h</div>
+              <div className="text-sm text-slate-500 mt-1">Esta semana</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Access (Action Cards) */}
+      <h2 className="flex items-center gap-2 text-xl font-bold text-white mt-8">
+        <span className="text-blue-500">⚡</span> Accesos Rápidos
+      </h2>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+        {/* Lab */}
+        <div className="group relative bg-slate-900 rounded-3xl p-8 border border-slate-800 overflow-hidden hover:border-blue-500/50 transition-all cursor-pointer" onClick={onUploadClick}>
+          {/* Bg Effect */}
+          <div className="absolute inset-0 bg-blue-600/5 group-hover:bg-blue-600/10 transition-colors"></div>
+          <div className="absolute -bottom-10 -right-10 text-slate-800/20 group-hover:text-blue-500/10 transition-colors">
+            <FlaskConical className="w-48 h-48" />
+          </div>
+
+          <div className="relative z-10 h-full flex flex-col justify-between">
+            <div>
+              <div className="p-3 bg-slate-800 rounded-xl w-fit mb-4 border border-slate-700 shadow-lg">
+                <FlaskConical className="w-6 h-6 text-blue-400" />
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-2">El Laboratorio</h3>
+              <p className="text-slate-400 text-sm leading-relaxed">Analiza tus partidas en profundidad y descubre patrones de error con Stockfish 16.</p>
+            </div>
+            <button className="mt-8 w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-transform active:scale-95">
+              Ir al Laboratorio <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Gym */}
+        <div className="group relative bg-slate-900 rounded-3xl p-8 border border-slate-800 overflow-hidden hover:border-orange-500/50 transition-all cursor-pointer" onClick={onTrainingClick}>
+          <div className="absolute inset-0 bg-orange-600/5 group-hover:bg-orange-600/10 transition-colors"></div>
+          <div className="absolute -bottom-10 -right-10 text-slate-800/20 group-hover:text-orange-500/10 transition-colors">
+            <Dumbbell className="w-48 h-48" />
+          </div>
+
+          <div className="relative z-10 h-full flex flex-col justify-between">
+            <div>
+              <div className="p-3 bg-slate-800 rounded-xl w-fit mb-4 border border-slate-700 shadow-lg">
+                <Dumbbell className="w-6 h-6 text-orange-400" />
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-2">El Gimnasio</h3>
+              <p className="text-slate-400 text-sm leading-relaxed">Entrenamiento táctico personalizado basado en tus errores recientes.</p>
+            </div>
+            <button className="mt-8 w-full py-3 bg-slate-800 hover:bg-orange-600 text-white border border-slate-700 hover:border-orange-500 rounded-xl font-bold flex items-center justify-center gap-2 transition-all">
+              Entrenar Ahora <Play className="w-4 h-4 fill-current" />
+            </button>
+          </div>
+        </div>
+
+        {/* Visor */}
+        <div className="group relative bg-slate-900 rounded-3xl p-8 border border-slate-800 overflow-hidden hover:border-purple-500/50 transition-all cursor-pointer" onClick={onVisorClick}>
+          <div className="absolute inset-0 bg-purple-600/5 group-hover:bg-purple-600/10 transition-colors"></div>
+          <div className="absolute -bottom-10 -right-10 text-slate-800/20 group-hover:text-purple-500/10 transition-colors">
+            <Eye className="w-48 h-48" />
+          </div>
+
+          <div className="relative z-10 h-full flex flex-col justify-between">
+            <div>
+              <div className="p-3 bg-slate-800 rounded-xl w-fit mb-4 border border-slate-700 shadow-lg">
+                <Eye className="w-6 h-6 text-purple-400" />
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-2">Visor PGN</h3>
+              <p className="text-slate-400 text-sm leading-relaxed">Importa, organiza y revisa tus bases de datos de partidas libremente.</p>
+            </div>
+            <button className="mt-8 w-full py-3 bg-slate-800 hover:bg-purple-600 text-white border border-slate-700 hover:border-purple-500 rounded-xl font-bold flex items-center justify-center gap-2 transition-all">
+              Abrir Visor <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
       </div>
 
-      {/* History Table */}
-      <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
-        <div className="p-4 border-b border-slate-700 bg-slate-800/50">
-          <h3 className="font-bold text-slate-200">Análisis Reciente</h3>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-slate-400">
-            <thead className="bg-slate-900/50 uppercase text-xs font-semibold text-slate-500">
-              <tr>
-                <th className="px-6 py-3">Fecha</th>
-                <th className="px-6 py-3">Jugadores</th>
-                <th className="px-6 py-3">Resultado</th>
-                <th className="px-6 py-3 text-right">ACPL</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-700">
-              {history.length === 0 ? (
-                <tr><td colSpan={4} className="px-6 py-8 text-center">Aún no hay partidas analizadas.</td></tr>
-              ) : history.map((g) => (
-                <tr key={g.id} className="hover:bg-slate-700/50 transition-colors">
-                  <td className="px-6 py-4">{g.date}</td>
-                  <td className="px-6 py-4 text-white">{g.white} vs {g.black}</td>
-                  <td className="px-6 py-4">{g.result}</td>
-                  <td className={`px-6 py-4 text-right font-mono font-bold ${g.averageCpl > 50 ? 'text-red-400' : 'text-green-400'}`}>
-                    {g.averageCpl}
-                  </td>
-                </tr>
+      {/* Recent Activity */}
+      <div className="mt-8">
+        <h2 className="flex items-center justify-between text-xl font-bold text-white mt-8 mb-6">
+          <span>Actividad Reciente</span>
+          <button className="text-sm text-blue-500 hover:text-blue-400 font-medium cursor-pointer">Ver todo</button>
+        </h2>
+
+        <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
+          {history.length === 0 ? (
+            <div className="p-8 text-center text-slate-500">No hay actividad reciente. Juega una partida para empezar.</div>
+          ) : (
+            <div className="divide-y divide-slate-800">
+              {history.slice(0, 5).map((game) => (
+                <div key={game.id} className="p-4 flex items-center justify-between hover:bg-slate-800/50 transition-colors group">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${game.averageCpl < 30 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
+                      {game.averageCpl < 30 ? <CheckCircle className="w-5 h-5" /> : <Target className="w-5 h-5" />}
+                    </div>
+                    <div>
+                      <h4 className="text-white font-bold text-sm">Análisis: {game.white} vs {game.black}</h4>
+                      <p className="text-xs text-slate-500">{game.averageCpl} ACPL • {game.result}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <span className="text-xs text-slate-600">{game.date}</span>
+                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => onReviewGame(game)} className="px-3 py-1 bg-slate-800 hover:bg-blue-600 text-slate-300 hover:text-white rounded text-xs font-bold transition-colors">Ver</button>
+                      <button onClick={() => onTrainGame(game)} className="px-3 py-1 bg-slate-800 hover:bg-orange-600 text-slate-300 hover:text-white rounded text-xs font-bold transition-colors">Entrenar</button>
+                    </div>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+          )}
         </div>
       </div>
-    </div >
+    </div>
   );
 };
 

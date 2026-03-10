@@ -4,7 +4,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>CentaUros Chess - Analysis Board</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -13,7 +12,6 @@
             margin: 0;
             padding: 0;
             overflow: hidden;
-            /* Hide scrollbars, parent handles layout */
             background: transparent;
         }
 
@@ -30,25 +28,10 @@
             height: 100vh;
             width: 100vw;
         }
-
-        /* Custom styles to match the dark theme */
-        .white-1e1d7 {
-            background-color: #f0d9b5;
-            color: #b58863;
-        }
-
-        .black-3c85d {
-            background-color: #b58863;
-            color: #f0d9b5;
-        }
     </style>
-    <!-- CSS Dependencies -->
     <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
-
-    <!-- JS Dependencies (Same as visor_pgn.html) -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
-    <!-- CRITICAL: Using 0.10.3 as per user request for robustness -->
     <script src="https://unpkg.com/chess.js@0.10.3/chess.js"></script>
 </head>
 
@@ -56,270 +39,198 @@
     <div class="board-container">
         <div id="board"></div>
     </div>
-
     <script>
+        // State
         let game = new Chess();
         let board = null;
         let moves = [];
-        let currentMoveIndex = -1;
-
-        function initBoard() {
-            const config = {
-                pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
-                draggable: false,
-                position: 'start'
-            };
-            board = Chessboard('board', config);
-
-            // Resize logic
-            const resizeObserver = new ResizeObserver(entries => {
-                for (let entry of entries) {
-                    const size = Math.min(entry.contentRect.width, entry.contentRect.height);
-                    board.resize(size); // Keep square if possible? ChessboardJS handles resize well usually
-                    // Actually, just calling board.resize() forces it to fit container width which is what we want
-                    board.resize();
-                }
-            });
-            resizeObserver.observe(document.body);
-        }
-
-        function loadGame(pgn) {
-            game.reset();
-            const success = game.load_pgn(pgn);
-            if (success) {
-                moves = game.history();
-                game.reset();
-                currentMoveIndex = -1;
-
-                // Check if FEN tag exists for custom start
-                // chess.js 0.10.3 handles this well internally usually, but let's be safe
-                // If game.header().FEN exists, we should use it.
-                // But wait, game.history() in 0.10.3 returns ONLY moves.
-                // We need to re-apply logic to get to current position.
-
-                // For initial display, just show start
-                // Ideally we check if FEN is present in header
-                const header = game.header();
-                if (header && header['FEN']) {
-                    // Custom start
-                    board.position(header['FEN']);
-                    // We might need to preload 'game' with this FEN for future moves?
-                    // Actually, 'moves' are SANs. We play them from the START position (which might be the FEN).
-                    // So when we replay, we must initialize tempGame with the FEN.
-                } else {
-                    board.position('start');
-                }
-            } else {
-                console.error("Failed to load PGN in iframe");
-                board.position('start');
-                moves = [];
-            }
-        }
-
-        function goToMove(index) {
-            // index is 0-based index in 'moves' array (ply - 1)
-            // -1 means start
-
-            // Replay from start
-            // We need to know the start FEN if custom
-            const tempGame = new Chess();
-
-            // Check for FEN header again or cache it
-            // Simple way: re-parse header from original game obj
-            // But 'game' object was reset. Wait.
-            // Let's keep a 'masterGame' that has the loaded PGN
-            // Refactoring to match visor_pgn logic exactly:
-
-            // Visor logic:
-            // const tempGame = new Chess();
-            // tempGame.load_pgn(game.pgn()); ... wait, game.pgn() returns string
-            // tempGame.move(moves[i])...
-
-            // Implementation:
-            // We need the original PGN string to re-load correctly OR we preserve 'game' state better.
-            // Let's just use the PGN string passed in loadGame.
-
-            // Actually, visor_pgn.html uses:
-            // const tempGame = new Chess();
-            // tempGame.load_pgn(game.pgn());
-            // This suggests 'game' still holds the full PGN? 
-            // BUT game.reset() was called in loadGame...
-
-            // Let's store global PGN string
-        }
-
         let globalPgn = "";
-
-        function loadGlobalGame(pgn) {
-            globalPgn = pgn;
-            loadGame(pgn);
-        }
-
-        function updateBoardAt(index) {
-            currentMoveIndex = index;
-
-            if (index >= 0 && index < moves.length) {
-                const tempGame = new Chess();
-                tempGame.load_pgn(globalPgn);
-
-                // But wait, load_pgn parses everything. We just want to get to specific move.
-                // The visor_pgn logic was:
-                // tempGame.load_pgn(game.pgn()) <-- RE-PARSES everything from the 'game' object
-                // AND THEN applies moves? No, that's redundant.
-
-                // Simpler:
-                // 1. Initialize tempGame with Start FEN (or standard)
-                // 2. Play 'index + 1' moves from 'moves' array.
-                // 3. Get FEN.
-
-                // Finding Start FEN:
-                // Let's regex it from globalPgn since we are in "Robust Mode"
-                const fenMatch = globalPgn.match(/\[FEN\s+"([^"]+)"\]/);
-                let startFen = 'start';
-                let loadedCustom = false;
-
-                tempGame.reset();
-                if (fenMatch && fenMatch[1]) {
-                    startFen = fenMatch[1];
-                    tempGame.load(startFen);
-                }
-
-                for (let i = 0; i <= index; i++) {
-                    tempGame.move(moves[i]);
-                }
-                board.position(tempGame.fen());
-            } else {
-                // Start position
-                const fenMatch = globalPgn.match(/\[FEN\s+"([^"]+)"\]/);
-                if (fenMatch && fenMatch[1]) {
-                    board.position(fenMatch[1]);
-                } else {
-                    board.position('start');
-                }
-            }
-        }
-
-        window.onload = initBoard;
-
-
-        // Message Listener for Parent Communication
-        window.addEventListener('message', (event) => {
-            const data = event.data;
-            if (data.type === 'LOAD_PGN') {
-                loadGlobalGame(data.pgn);
-            } else if (data.type === 'GOTO_MOVE') {
-                updateBoardAt(data.index);
-            } else if (data.type === 'LOAD_FEN') {
-                loadFen(data.fen);
-            } else if (data.type === 'ENABLE_INTERACTION') {
-                enableInteraction(data.enabled, data.side);
-            }
-        });
-
-        // Interactivity State
-        let isInteractive = false;
-        let playerSide = 'w'; // 'w' or 'b'
         let currentFen = 'start';
+        let isInteractive = false;
+        let playerSide = 'w';
 
-        function enableInteraction(enabled, side) {
-            isInteractive = enabled;
-            playerSide = side || 'w';
-            // Re-initialize board with draggable config
-            // Note: ChessboardJS needs re-init to change config usually, or just config update if supported?
-            // 1.0.0 doesn't support changing config dynamically easily without re-creating.
-            board.destroy(); // Remove old
-            initBoard(); // Re-create with new settings
-            board.position(currentFen);
-        }
-
-        function loadFen(fen) {
-            // Load a specific FEN directly (for Gym mode)
-            game.reset(); // clear global game
-            globalPgn = "";
-            moves = [];
-            currentMoveIndex = -1;
-            currentFen = fen;
-            board.position(fen);
-            notifyStateUpdate(fen, "", -1);
-        }
-
+        // Init
         function initBoard() {
+            if (board && typeof board.destroy === 'function') {
+                // 0.10.3 doesn't have destroy? 1.0.0 does. 
+                // If destroys fails, just recreate logic.
+                board.destroy();
+            }
+
             const config = {
                 pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png',
                 draggable: isInteractive,
-                position: 'start',
+                position: currentFen,
                 orientation: playerSide === 'w' ? 'white' : 'black',
                 onDragStart: onDragStart,
                 onDrop: onDrop,
                 onSnapEnd: onSnapEnd
             };
-            board = Chessboard('board', config);
+            try {
+                board = Chessboard('board', config);
+            } catch (e) {
+                console.error("Board init error:", e);
+            }
 
-            // Resize logic
-            const resizeObserver = new ResizeObserver(entries => {
-                for (let entry of entries) {
-                    board.resize();
-                }
-            });
-            resizeObserver.observe(document.body);
+            // Window Resize Handler (Simpler/Safer than ResizeObserver for Iframe)
+            window.removeEventListener('resize', resizeBoard);
+            window.addEventListener('resize', resizeBoard);
+
+            // Initial resize
+            setTimeout(resizeBoard, 100);
         }
+
+        function resizeBoard() {
+            if (board) board.resize();
+        }
+
+        // --- Logic ---
+
+        function loadGlobalGame(pgn) {
+            try {
+                globalPgn = pgn;
+                game.reset();
+                // Check if PGN string is valid
+                if (!pgn || pgn.trim() === "") {
+                    // Just reset
+                    currentFen = 'start';
+                    board.position('start');
+                    return;
+                }
+
+                const success = game.load_pgn(pgn);
+                if (success) {
+                    moves = game.history();
+                    // Check for FEN in PGN (Custom Start)
+                    const header = game.header();
+                    if (header && header['FEN']) {
+                        currentFen = header['FEN'];
+                    } else {
+                        currentFen = 'start';
+                    }
+
+                    // Display start position
+                    board.position(currentFen);
+                    notifyStateUpdate(currentFen, "", 0);
+                } else {
+                    console.error("Failed to load PGN", pgn);
+                    // Fallback to avoid dead state
+                    game.reset();
+                    board.position('start');
+                }
+            } catch (e) {
+                console.error("Error loading global game:", e);
+            }
+        }
+
+        function updateBoardAt(index) {
+            try {
+                // index is 0-based index of the move made (0 = 1. e4)
+                // -1 = Start Position
+
+                if (index < 0) {
+                    // Reset to game start (which might be custom FEN)
+                    const tempGame = new Chess();
+                    // Extract FEN from global PGN if needed for replay
+                    const fenMatch = globalPgn ? globalPgn.match(/\[FEN\s+"([^"]+)"\]/) : null;
+                    if (fenMatch && fenMatch[1]) {
+                        currentFen = fenMatch[1];
+                    } else {
+                        currentFen = 'start';
+                    }
+                    // Safe positional update
+                    if (board) board.position(currentFen);
+                    notifyStateUpdate(currentFen, "", 0); // ply 0
+                    return;
+                }
+
+                if (globalPgn) {
+                    const tempGame = new Chess();
+                    // Load Start FEN
+                    const fenMatch = globalPgn.match(/\[FEN\s+"([^"]+)"\]/);
+                    if (fenMatch && fenMatch[1]) {
+                        tempGame.load(fenMatch[1]);
+                    }
+
+                    // Replay moves up to index
+                    let lastSan = "";
+                    for (let i = 0; i <= index; i++) {
+                        if (moves[i]) {
+                            const res = tempGame.move(moves[i]);
+                            if (res) lastSan = res.san;
+                        }
+                    }
+
+                    currentFen = tempGame.fen();
+                    if (board) board.position(currentFen);
+                    notifyStateUpdate(currentFen, lastSan, index + 1);
+                }
+            } catch (e) {
+                console.error("Error updating board:", e);
+            }
+        }
+
+        function enableInteraction(enabled, side) {
+            isInteractive = enabled;
+            playerSide = side || 'w';
+            // Re-init to update config (draggable/orientation)
+            initBoard();
+        }
+
+        function loadFen(fen) {
+            game.load(fen);
+            currentFen = fen;
+            board.position(fen);
+            notifyStateUpdate(fen, "", -1); // unknown ply
+        }
+
+        // --- Interaction Handlers ---
 
         function onDragStart(source, piece, position, orientation) {
             if (!isInteractive) return false;
 
-            // Only pick up own pieces
-            if ((orientation === 'white' && piece.search(/^w/) === -1) ||
-                (orientation === 'black' && piece.search(/^b/) === -1)) {
-                return false;
-            }
+            // Only pick up pieces for the player's side
+            const pieceColor = piece.charAt(0); // 'w' or 'b'
+            if (playerSide === 'w' && pieceColor !== 'w') return false;
+            if (playerSide === 'b' && pieceColor !== 'b') return false;
 
-            // Only allow if it's our turn?
-            // We need a game instance with current FEN to check turn.
-            const temp = new Chess(currentFen);
-            if ((temp.turn() === 'w' && piece.search(/^b/) !== -1) ||
-                (temp.turn() === 'b' && piece.search(/^w/) !== -1)) {
-                return false;
-            }
+            // Prevent moving if game over logic? (Left for React control)
+            return true;
         }
 
         function onDrop(source, target) {
             if (!isInteractive) return 'snapback';
 
-            // Validate move with local legacy engine
+            // Validate with local chess.js
             const temp = new Chess(currentFen);
-
-            // Construct move
             const move = temp.move({
                 from: source,
                 to: target,
-                promotion: 'q' // NOTE: Always promote to queen for simplicity in UI for now
+                promotion: 'q'
             });
 
             if (move === null) return 'snapback';
 
-            // Legal move
             currentFen = temp.fen();
 
-            // Emit Move Attempt
+            // Emit to Parent
             window.parent.postMessage({
                 type: 'MOVE_ATTEMPT',
                 source: source,
                 target: target,
-                promotion: 'q', // simplifying
+                promotion: 'q',
                 fen: currentFen,
                 san: move.san
             }, '*');
 
-            // Update board state immediately? 
-            // Yes, let the piece drop.
+            // We allow the visual drop. React will send LOAD_FEN if it rejects it.
         }
 
         function onSnapEnd() {
-            // If we relied on 'game' updates we would sync here, but we trust board state for now
+            // board.position(currentFen); // optional sync
         }
 
         function notifyStateUpdate(fen, san, ply) {
-            console.log("Notifying state:", san);
             window.parent.postMessage({
                 type: 'STATE_UPDATE',
                 fen: fen,
@@ -328,43 +239,18 @@
             }, '*');
         }
 
-        function updateBoardAt(index) {
-            currentMoveIndex = index;
+        // --- Event Listeners ---
+        window.onload = initBoard;
 
-            if (globalPgn) {
-                // Replay logic (same as before)
-                const tempGame = new Chess();
-                // Load start pos if FEN present
-                const fenMatch = globalPgn.match(/\[FEN\s+"([^"]+)"\]/);
-                if (fenMatch && fenMatch[1]) {
-                    tempGame.load(fenMatch[1]);
-                }
-
-                // Apply moves
-                let lastSan = "";
-                for (let i = 0; i <= index; i++) {
-                    const moveParams = moves[i];
-                    // moves[i] is just string in 0.10.3?
-                    // Yes, history() returns array of strings.
-                    // But wait, if moves is strings, tempGame.move(string) works.
-                    const result = tempGame.move(moves[i]);
-                    if (result) lastSan = result.san;
-                }
-
-                currentFen = tempGame.fen();
-                board.position(currentFen);
-
-                // Notify Parent of Details (SAN, Ply etc)
-                // Parent sent the index, but we send back the textual details to keep UI synced
-                // index 0 = 1st move. ply = index + 1.
-                notifyStateUpdate(currentFen, lastSan, index + 1);
-
-            } else {
-                // reset
-                board.position('start');
-                notifyStateUpdate('start', '', 0);
+        window.addEventListener('message', (event) => {
+            const data = event.data;
+            switch (data.type) {
+                case 'LOAD_PGN': loadGlobalGame(data.pgn); break;
+                case 'GOTO_MOVE': updateBoardAt(data.index); break;
+                case 'LOAD_FEN': loadFen(data.fen); break;
+                case 'ENABLE_INTERACTION': enableInteraction(data.enabled, data.side); break;
             }
-        }
+        });
     </script>
 </body>
 

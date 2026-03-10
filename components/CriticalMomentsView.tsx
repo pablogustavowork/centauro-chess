@@ -3,12 +3,13 @@ import React, { useRef, useEffect } from 'react';
 import { GameData, CriticalMoment } from '../types';
 import { ArrowRight, AlertTriangle, Activity, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, PlayCircle } from 'lucide-react';
 
-interface AnalysisViewProps {
+
+interface CriticalMomentsViewProps {
   game: GameData;
   onStartChallenge: (moment: CriticalMoment) => void;
 }
 
-const AnalysisView: React.FC<AnalysisViewProps> = ({ game, onStartChallenge }) => {
+const CriticalMomentsView: React.FC<CriticalMomentsViewProps> = ({ game, onStartChallenge }) => {
   const [currentPly, setCurrentPly] = React.useState(0);
   const [maxPly, setMaxPly] = React.useState(0);
   // Add state for current SAN to display in Laboratory
@@ -228,4 +229,5 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ game, onStartChallenge }) =
   );
 };
 
-export default AnalysisView;
+
+export default CriticalMomentsView;

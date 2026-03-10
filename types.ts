@@ -28,6 +28,22 @@ export interface CriticalMoment extends AnalysisResult {
   errorType: ErrorType;
 }
 
+
+export interface EvalPoint {
+  ply: number;
+  score: number; // Centipawns (White perspective)
+}
+
+export interface ClassificationCounts {
+  brilliant: number;
+  great: number;
+  best: number;
+  good: number;
+  inaccuracy: number;
+  mistake: number;
+  blunder: number;
+}
+
 export interface GameData {
   id: string;
   white: string;
@@ -38,6 +54,11 @@ export interface GameData {
   averageCpl: number;
   criticalMoments: CriticalMoment[];
   dominantError: ErrorType;
+
+  // Phase 2: Game Review Data
+  accuracy?: { white: number; black: number };
+  evalHistory?: EvalPoint[];
+  classifications?: { white: ClassificationCounts; black: ClassificationCounts };
 }
 
 export interface Puzzle {
@@ -47,4 +68,5 @@ export interface Puzzle {
   description: string;
 }
 
-export type ViewState = 'landing' | 'dashboard' | 'upload' | 'analysis' | 'challenge' | 'training' | 'visor';
+
+export type ViewState = 'landing' | 'dashboard' | 'upload' | 'analysis' | 'review' | 'challenge' | 'training' | 'visor';

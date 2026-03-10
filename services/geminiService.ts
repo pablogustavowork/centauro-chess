@@ -8,7 +8,7 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
 
 export const generateAdaptivePuzzles = async (errorType: ErrorType): Promise<Puzzle[]> => {
   const model = "gemini-2.5-flash";
-  
+
   let promptTheme = "táctica general";
   if (errorType === ErrorType.TACTICAL_GRAVE) promptTheme = "patrones de mate, piezas colgadas y errores tácticos graves";
   if (errorType === ErrorType.POSITIONAL_STRONG) promptTheme = "estructura de peones, casillas débiles y mejorar la actividad de las piezas";
@@ -48,7 +48,7 @@ export const generateAdaptivePuzzles = async (errorType: ErrorType): Promise<Puz
 
     const text = response.text;
     if (!text) return [];
-    
+
     return JSON.parse(text) as Puzzle[];
   } catch (error) {
     console.error("Gemini API Error:", error);
@@ -67,5 +67,32 @@ export const generateAdaptivePuzzles = async (errorType: ErrorType): Promise<Puz
         description: "Apoya el centro."
       }
     ];
+  }
+};
+
+export const getGameCoachComment = async (pgn: string, accuracy: number, result: string): Promise<string> => {
+  const model = "gemini-2.5-flash";
+  // Truncate PGN to avoid token limits if very long
+  const safePgn = pgn.length > 2000 ? pgn.substring(0, 2000) + "..." : pgn;
+
+  const prompt = `Act as a friendly, encouraging chess coach.
+    Review this game summary:
+    - Result: ${result}
+    - Player Accuracy: ${accuracy}%
+    - PGN (partial): ${safePgn}
+
+    Write ONE single sentence (max 20 words) in Spanish summarizing the player's performance.
+    Be positive but honest. If accuracy is low, suggest learning. If high, praise calculation.
+    Example: "¡Gran partida! Has controlado el centro a la perfección, aunque hubo un pequeño desliz en el final."`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: model,
+      contents: prompt,
+    });
+    return response.text?.trim() || "¡Buena partida! Sigue practicando para mejorar tu precisión.";
+  } catch (error) {
+    console.error("Gemini Coach Error:", error);
+    return "¡Bien jugado! Analiza tus errores para seguir mejorando.";
   }
 };

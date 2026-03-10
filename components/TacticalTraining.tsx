@@ -14,9 +14,10 @@ const TacticalTraining: React.FC<TacticalTrainingProps> = ({ errorType, onClose 
 
   const [puzzles, setPuzzles] = useState<Puzzle[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const [mode, setMode] = useState<'intro' | 'active'>('intro');
   const [currentIndex, setCurrentIndex] = useState(0);
   const [status, setStatus] = useState<'solving' | 'correct' | 'incorrect'>('solving');
-  // Removed local game state as logic is delegated to iframe
 
   useEffect(() => {
     const loadPuzzles = async () => {
@@ -30,7 +31,7 @@ const TacticalTraining: React.FC<TacticalTrainingProps> = ({ errorType, onClose 
 
   // Sync Iframe with Current Puzzle
   useEffect(() => {
-    if (puzzles.length > 0 && !loading) {
+    if (mode === 'active' && puzzles.length > 0 && !loading) {
       const currentPuzzle = puzzles[currentIndex];
       const initIframe = () => {
         if (iframeRef.current && iframeRef.current.contentWindow) {
@@ -42,16 +43,14 @@ const TacticalTraining: React.FC<TacticalTrainingProps> = ({ errorType, onClose 
           iframeRef.current.contentWindow.postMessage({
             type: 'ENABLE_INTERACTION',
             enabled: status === 'solving',
-            side: 'w' // Puzzles usually white to move, or should we detect? 
-            // Gemini usually gives 'w' to move. 
-            // Ideally we check FEN active color.
+            side: 'w'
           }, '*');
         }
       };
       const timer = setTimeout(initIframe, 500);
       return () => clearTimeout(timer);
     }
-  }, [currentIndex, puzzles, loading, status]);
+  }, [currentIndex, puzzles, loading, status, mode]);
 
   // Listen for Moves
   useEffect(() => {
@@ -108,14 +107,73 @@ const TacticalTraining: React.FC<TacticalTrainingProps> = ({ errorType, onClose 
     );
   }
 
+  // --- INTRO MODE: PROGRAM CARD ---
+  if (mode === 'intro') {
+    return (
+      <div className="max-w-2xl mx-auto p-8 bg-slate-800 rounded-2xl shadow-2xl border border-slate-700 animate-in zoom-in-95 duration-300">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-purple-500/10 mb-4 ring-1 ring-purple-500/50">
+            <RefreshCw className="w-8 h-8 text-purple-400 animate-spin-slow" />
+          </div>
+          <h2 className="text-2xl font-bold text-white mb-2">Laboratorio de Análisis: Resultados Procesados</h2>
+          <p className="text-slate-400">Hemos detectado inconsistencias recurrentes en tus partidas recientes.</p>
+        </div>
+
+        <div className="bg-slate-900/50 rounded-xl p-6 border border-slate-700 mb-8 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <div className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">DIAGNÓSTICO PRINCIPAL</div>
+              <div className="text-xl font-bold text-red-400 flex items-center gap-2">
+                <X className="w-5 h-5" /> {errorType}
+              </div>
+            </div>
+          </div>
+
+          <div className="h-px bg-slate-800 my-4"></div>
+
+          <div>
+            <div className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">PLAN DE ENTRENAMIENTO GENERADO</div>
+            <ul className="space-y-3">
+              <li className="flex items-center gap-3 text-slate-300 text-sm">
+                <Check className="w-4 h-4 text-green-500" />
+                <span>Serie de <strong>{puzzles.length} ejercicios</strong> de alta intensidad.</span>
+              </li>
+              <li className="flex items-center gap-3 text-slate-300 text-sm">
+                <Check className="w-4 h-4 text-green-500" />
+                <span>Enfoque en <strong>{puzzles[0]?.theme || "patrones tácticos"}</strong> y cálculo preciso.</span>
+              </li>
+              <li className="flex items-center gap-3 text-slate-300 text-sm">
+                <Check className="w-4 h-4 text-green-500" />
+                <span>Objetivo: Reducir la tasa de error en un <strong>15%</strong>.</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <button
+          onClick={() => setMode('active')}
+          className="w-full py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-bold text-lg rounded-xl shadow-lg transform hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
+        >
+          <RefreshCw className="w-5 h-5" /> Iniciar Programa Personalizado
+        </button>
+        <p className="text-center text-xs text-slate-500 mt-4">
+          La repetición espaciada es clave para eliminar patrones de error subconscientes.
+        </p>
+      </div>
+    );
+  }
+
+  // --- ACTIVE MODE: PUZZLES ---
   const puzzle = puzzles[currentIndex];
 
   return (
-    <div className="max-w-4xl mx-auto p-4 bg-slate-800 rounded-xl shadow-2xl border border-slate-700">
+    <div className="max-w-4xl mx-auto p-4 bg-slate-800 rounded-xl shadow-2xl border border-slate-700 animate-in fade-in slide-in-from-bottom-4">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-bold text-white flex items-center gap-2">
           <RefreshCw className="w-5 h-5 text-purple-500" />
-          Adaptación Táctica
+          Entrenamiento Activo
         </h2>
         <span className="bg-slate-900 text-slate-300 px-3 py-1 rounded-full text-sm font-mono">
           {currentIndex + 1} / {puzzles.length}
