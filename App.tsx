@@ -210,6 +210,13 @@ const MainApp: React.FC = () => {
               alert("No hay partidas para revisar.");
               setView('upload');
             }
+          } else if (viewId === 'deep_analysis') {
+            if (deepAnalysisResult) {
+              setView('deep_analysis');
+            } else {
+              alert("Primero debes realizar un Diagnóstico Profundo en el panel de control.");
+              setView('dashboard');
+            }
           } else {
             setView(viewId as ViewState);
           }

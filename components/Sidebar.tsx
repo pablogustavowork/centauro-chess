@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Home, FlaskConical, Dumbbell, FileText, Settings, Plus, LogOut, LayoutGrid } from 'lucide-react';
+import { Home, FlaskConical, Dumbbell, FileText, Settings, Plus, LogOut, LayoutGrid, Activity } from 'lucide-react';
 import { UserProfile } from '../types';
 
 interface SidebarProps {
@@ -19,6 +19,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, onNewGame, o
         { id: 'analysis', label: 'El Laboratorio', icon: FlaskConical }, // Direct to Upload/Analysis
         { id: 'training', label: 'El Gimnasio', icon: Dumbbell },
         { id: 'visor', label: 'Visor PGN', icon: FileText },
+        { id: 'deep_analysis', label: 'Reporte Lichess', icon: Activity },
         // { id: 'settings', label: 'Ajustes', icon: Settings }, // Future
     ];
 

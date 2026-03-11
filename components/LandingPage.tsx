@@ -97,6 +97,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp, user }) => {
                     onClick={() => {
                       const email = (document.getElementById('login-email') as HTMLInputElement).value;
                       const pass = (document.getElementById('login-password') as HTMLInputElement).value;
+                      if (!email || !pass) {
+                        alert("Por favor, ingresa tu correo y contraseña para iniciar sesión.");
+                        return;
+                      }
                       onEnterApp(email, pass, 'login');
                     }}
                     className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 text-sm rounded-lg transition-all flex items-center justify-center gap-2"
@@ -107,6 +111,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onEnterApp, user }) => {
                     onClick={() => {
                       const email = (document.getElementById('login-email') as HTMLInputElement).value;
                       const pass = (document.getElementById('login-password') as HTMLInputElement).value;
+                      if (!email || !pass) {
+                        alert("Por favor, ingresa tu correo y contraseña para registrarte.");
+                        return;
+                      }
                       onEnterApp(email, pass, 'signup');
                     }}
                     className="bg-white/5 hover:bg-white/10 text-white font-bold py-2.5 text-sm rounded-lg transition-all border border-white/10"
