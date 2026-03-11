@@ -69,4 +69,16 @@ export interface Puzzle {
 }
 
 
-export type ViewState = 'landing' | 'dashboard' | 'upload' | 'analysis' | 'review' | 'challenge' | 'training' | 'visor';
+
+export interface BatchAnalysisResult {
+  username: string;
+  gamesCount: number;
+  averageCpl: number;
+  dominantError: ErrorType;
+  accuracyTrend: number[]; // Accuracy of each game
+  errorDistribution: { [key in ErrorType]: number };
+  games: GameData[];
+}
+
+export type ViewState = 'landing' | 'dashboard' | 'upload' | 'analysis' | 'review' | 'challenge' | 'training' | 'visor' | 'deep_analysis';
+

@@ -1,6 +1,6 @@
 
 import { Chess } from 'chess.js';
-import { GameData, AnalysisResult, CriticalMoment, ErrorType } from '../types';
+import { GameData, AnalysisResult, CriticalMoment, ErrorType, BatchAnalysisResult, EvalPoint } from '../types';
 
 /**
  * SERVICIO DE ANÁLISIS REAL CON STOCKFISH
@@ -288,6 +288,7 @@ export const analyzeGame = async (pgn: string, playerId: string = 'Usuario'): Pr
       });
 
 
+
     } catch (e: any) {
       console.error(e);
       worker.terminate();
@@ -295,3 +296,63 @@ export const analyzeGame = async (pgn: string, playerId: string = 'Usuario'): Pr
     }
   });
 };
+
+export const analyzeBatch = async (
+  pgns: string[], 
+  username: string, 
+  onProgress?: (current: number, total: number) => void
+): Promise<BatchAnalysisResult> => {
+  const games: GameData[] = [];
+  const accuracyTrend: number[] = [];
+  const errorDistribution: { [key in ErrorType]: number } = {
+    [ErrorType.TACTICAL_GRAVE]: 0,
+    [ErrorType.POSITIONAL_STRONG]: 0,
+    [ErrorType.OPENING_IMPRECISION]: 0,
+    [ErrorType.MINOR]: 0
+  };
+
+  let totalCplSum = 0;
+
+  for (let i = 0; i < pgns.length; i++) {
+    if (onProgress) onProgress(i + 1, pgns.length);
+    
+    try {
+      const data = await analyzeGame(pgns[i], username);
+      games.push(data);
+      totalCplSum += data.averageCpl;
+      
+      // Accuracy trend (average of white/black accuracy depends on who the user is)
+      const userIsWhite = data.white.toLowerCase().includes(username.toLowerCase()) || username === 'Usuario';
+      const userAccuracy = userIsWhite ? (data.accuracy?.white || 0) : (data.accuracy?.black || 0);
+      accuracyTrend.push(userAccuracy);
+
+      // Distribute errors
+      data.criticalMoments.forEach(m => {
+        errorDistribution[m.errorType]++;
+      });
+    } catch (e) {
+      console.warn(`Error analizando partida ${i+1}:`, e);
+    }
+  }
+
+  // Calculate global dominant error
+  let dominantError = ErrorType.MINOR;
+  let maxCount = -1;
+  (Object.keys(errorDistribution) as ErrorType[]).forEach(type => {
+      if (errorDistribution[type] > maxCount) {
+          maxCount = errorDistribution[type];
+          dominantError = type;
+      }
+  });
+
+  return {
+    username,
+    gamesCount: games.length,
+    averageCpl: games.length > 0 ? totalCplSum / games.length : 0,
+    dominantError,
+    accuracyTrend,
+    errorDistribution,
+    games
+  };
+};
+

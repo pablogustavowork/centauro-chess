@@ -15,20 +15,27 @@ interface DashboardProps {
   onDirectPgnLoad: (pgn: string, mode: 'analysis' | 'viewer') => void;
   onReviewGame: (game: GameData) => void;
   onTrainGame: (game: GameData) => void;
+  onDeepAnalysisStart: (username: string) => void;
+  isBatchAnalyzing: boolean;
+  batchProgress: { current: number; total: number };
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ profile, history, onUploadClick, onTrainingClick, onVisorClick, onDirectPgnLoad, onReviewGame, onTrainGame }) => {
+const Dashboard: React.FC<DashboardProps> = ({ 
+  profile, history, onUploadClick, onTrainingClick, onVisorClick, onDirectPgnLoad, 
+  onReviewGame, onTrainGame, onDeepAnalysisStart, isBatchAnalyzing, batchProgress 
+}) => {
+  const [lichessUser, setLichessUser] = React.useState('');
 
-  // Mock Data for the slick graph
+  // ... (Data calculation same as before)
   const trendData = history.length > 0
     ? history.map((g, i) => ({ name: `J${i + 1}`, cpl: g.averageCpl }))
     : [
       { name: 'SEM 1', cpl: 35 }, { name: 'SEM 2', cpl: 28 }, { name: 'SEM 3', cpl: 22 },
-      { name: 'SEM 4', cpl: 18 }, { name: 'SEM 5', cpl: 12 }, { name: 'HOY', cpl: 9.5 } // Data matching image curve better
+      { name: 'SEM 4', cpl: 18 }, { name: 'SEM 5', cpl: 12 }, { name: 'HOY', cpl: 9.5 }
     ];
 
-  const currentCpl = history.length > 0 ? history[history.length - 1].averageCpl : 18.5; // Example value from image
-  const improvement = "-12%"; // Example value from image
+  const currentCpl = history.length > 0 ? history[history.length - 1].averageCpl : 18.5;
+  const improvement = "-12%";
 
   return (
     <div className="p-8 max-w-[1600px] mx-auto space-y-8 animate-in fade-in">
@@ -44,17 +51,12 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, history, onUploadClick, 
         </div>
       </div>
 
-      {/* Top Row: Metrics & Graph */}
+      {/* ... (Metrics row same as before) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        {/* Main Graph Card */}
         <div className="lg:col-span-2">
           <CPLTrendGraph data={trendData} currentCpl={currentCpl} improvement={improvement} />
         </div>
-
-        {/* Side KPIs */}
         <div className="space-y-6">
-          {/* Problems Solved */}
           <div className="bg-slate-900 rounded-3xl p-6 border border-slate-800 flex flex-col justify-between h-[154px] relative overflow-hidden">
             <div className="absolute top-0 right-0 p-32 bg-orange-500/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
             <div className="flex items-center gap-3 mb-2">
@@ -66,8 +68,6 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, history, onUploadClick, 
               <div className="text-sm text-slate-500 mt-1">+12 hoy</div>
             </div>
           </div>
-
-          {/* Study Time */}
           <div className="bg-slate-900 rounded-3xl p-6 border border-slate-800 flex flex-col justify-between h-[154px] relative overflow-hidden">
             <div className="absolute top-0 right-0 p-32 bg-purple-500/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
             <div className="flex items-center gap-3 mb-2">
@@ -82,9 +82,76 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, history, onUploadClick, 
         </div>
       </div>
 
+      {/* NEW: Lichess Deep Diagnosis Section */}
+      <h2 className="flex items-center gap-2 text-xl font-bold text-white mt-8">
+        <span className="text-orange-500">⚛️</span> Diagnóstico Profundo
+      </h2>
+      <div className="bg-slate-900 rounded-3xl p-8 border border-slate-800 relative overflow-hidden">
+         <div className="absolute top-0 right-0 p-64 bg-blue-500/5 rounded-full blur-[120px] -mr-32 -mt-32 pointer-events-none"></div>
+         
+         <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-8">
+            <div className="max-w-xl">
+               <h3 className="text-2xl font-bold text-white mb-3">Escáner de Rendimiento Lichess</h3>
+               <p className="text-slate-400 leading-relaxed mb-6">
+                  Importa tus últimas 20 partidas directamente de Lichess. Analizaremos tu ACPL, tus errores más frecuentes y generaremos un reporte de situación detallado para "El Gimnasio".
+               </p>
+               
+               <div className="flex flex-col sm:flex-row gap-3">
+                  <input 
+                    type="text" 
+                    placeholder="Tu usuario de Lichess" 
+                    value={lichessUser}
+                    onChange={(e) => setLichessUser(e.target.value)}
+                    disabled={isBatchAnalyzing}
+                    className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors"
+                  />
+                  <button 
+                    onClick={() => onDeepAnalysisStart(lichessUser)}
+                    disabled={isBatchAnalyzing || !lichessUser}
+                    className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold px-8 py-3 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95"
+                  >
+                    {isBatchAnalyzing ? (
+                      <>
+                        <Clock className="w-4 h-4 animate-spin" />
+                        Analizando {batchProgress.current}/{batchProgress.total}...
+                      </>
+                    ) : (
+                      <>
+                        Iniciar Diagnóstico <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
+                  </button>
+               </div>
+            </div>
+            
+            <div className="hidden lg:flex gap-4">
+               {/* Stats preview placeholders */}
+               <div className="p-4 bg-slate-800/50 rounded-2xl border border-white/5 text-center w-32">
+                  <div className="text-blue-400 font-bold text-lg">20</div>
+                  <div className="text-[10px] text-slate-500 uppercase">Partidas</div>
+               </div>
+               <div className="p-4 bg-slate-800/50 rounded-2xl border border-white/5 text-center w-32">
+                  <div className="text-green-400 font-bold text-lg">Deep</div>
+                  <div className="text-[10px] text-slate-500 uppercase">Análisis</div>
+               </div>
+            </div>
+         </div>
+
+         {isBatchAnalyzing && (
+           <div className="mt-8">
+              <div className="w-full bg-slate-800 rounded-full h-1 overflow-hidden">
+                <div 
+                  className="bg-blue-500 h-full transition-all duration-500" 
+                  style={{ width: `${(batchProgress.current / batchProgress.total) * 100}%` }}
+                ></div>
+              </div>
+           </div>
+         )}
+      </div>
+
       {/* Quick Access (Action Cards) */}
       <h2 className="flex items-center gap-2 text-xl font-bold text-white mt-8">
-        <span className="text-blue-500">⚡</span> Accesos Rápidos
+        <span className="text-blue-500">⚡</span> Herramientas
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
@@ -153,6 +220,7 @@ const Dashboard: React.FC<DashboardProps> = ({ profile, history, onUploadClick, 
         </div>
 
       </div>
+
 
       {/* Recent Activity */}
       <div className="mt-8">

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { UserProfile, GameData, ViewState, CriticalMoment, ErrorType } from './types';
+import { UserProfile, GameData, ViewState, CriticalMoment, ErrorType, BatchAnalysisResult } from './types';
 import Dashboard from './components/Dashboard';
 
 
@@ -10,11 +10,13 @@ import CriticalChallenge from './components/CriticalChallenge';
 import TacticalTraining from './components/TacticalTraining';
 import LandingPage from './components/LandingPage';
 import PGNViewer from './components/PGNViewer';
-import { analyzeGame } from './services/analysisService';
+import { analyzeGame, analyzeBatch } from './services/analysisService';
+import { fetchLichessGames } from './services/lichessService';
 import { saveGame, getUserGames } from './services/gameService';
 import Sidebar from './components/Sidebar';
+import DeepAnalysisReport from './components/DeepAnalysisReport';
 
-import { Layout, FileText, X, Activity } from 'lucide-react';
+import { Layout, FileText, X, Activity, BarChart3 } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 
@@ -28,6 +30,12 @@ const MainApp: React.FC = () => {
   const [activeMoment, setActiveMoment] = useState<CriticalMoment | null>(null);
   const [pgnInput, setPgnInput] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  // Deep Analysis State
+  const [isBatchAnalyzing, setIsBatchAnalyzing] = useState(false);
+  const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
+  const [deepAnalysisResult, setDeepAnalysisResult] = useState<BatchAnalysisResult | null>(null);
+
 
   // Navigation handlers
   const goToDashboard = () => setView('dashboard');
@@ -154,6 +162,27 @@ const MainApp: React.FC = () => {
     setView('analysis_results');
   };
 
+  const handleDeepAnalysisStart = async (username: string) => {
+    if (!username) return;
+    setIsBatchAnalyzing(true);
+    setBatchProgress({ current: 0, total: 20 });
+    
+    try {
+      const pgns = await fetchLichessGames(username, 20);
+      const result = await analyzeBatch(pgns, username, (current, total) => {
+        setBatchProgress({ current, total });
+      });
+      
+      setDeepAnalysisResult(result);
+      setView('deep_analysis');
+    } catch (error: any) {
+      alert(error.message || "Error en el Diagnóstico Profundo.");
+    } finally {
+      setIsBatchAnalyzing(false);
+    }
+  };
+
+
 
   return (
     <div className="flex bg-slate-950 text-slate-200 font-sans selection:bg-blue-500/30 h-screen overflow-hidden">
@@ -232,7 +261,11 @@ const MainApp: React.FC = () => {
               onDirectPgnLoad={handleDirectPgnLoad}
               onReviewGame={handleReviewGame}
               onTrainGame={handleTrainGame}
+              onDeepAnalysisStart={handleDeepAnalysisStart}
+              isBatchAnalyzing={isBatchAnalyzing}
+              batchProgress={batchProgress}
             />
+
           )}
 
           {/* ... (Rest of views: upload, analysis, challenge, training, visor) ... */}
@@ -344,6 +377,19 @@ const MainApp: React.FC = () => {
           {view === 'visor' && (
             <PGNViewer onBack={goToDashboard} initialPgn={pgnInput} />
           )}
+
+          {/* VIEW: DEEP ANALYSIS REPORT */}
+          {view === 'deep_analysis' && deepAnalysisResult && (
+            <DeepAnalysisReport 
+              result={deepAnalysisResult} 
+              onBack={goToDashboard}
+              onReviewGame={(game) => {
+                setActiveGame(game);
+                setView('review');
+              }}
+            />
+          )}
+
         </div>
       </main>
     </div>
