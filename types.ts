@@ -5,10 +5,29 @@ export interface UserProfile {
 }
 
 export enum ErrorType {
+  // Legacy
   TACTICAL_GRAVE = 'Error Táctico Grave', // CPL > 300
   POSITIONAL_STRONG = 'Error Posicional Fuerte', // CPL 100-300
   OPENING_IMPRECISION = 'Imprecisión de Apertura', // CPL 50-100 (Moves < 12)
-  MINOR = 'Imprecisión Menor'
+  MINOR = 'Imprecisión Menor',
+  // New V2 technical types
+  TACTICA = 'táctica',
+  CALCULO = 'cálculo',
+  ESTRATEGIA = 'estrategia',
+  DEFENSA = 'defensa',
+  APERTURA = 'apertura',
+  FINALES = 'finales',
+  MANEJO_TIEMPO = 'manejo del tiempo'
+}
+
+export interface PlayerStats {
+  tactica: number;
+  calculo: number;
+  estrategia: number;
+  defensa: number;
+  apertura: number;
+  finales: number;
+  manejoTiempo: number;
 }
 
 export interface AnalysisResult {
@@ -80,5 +99,5 @@ export interface BatchAnalysisResult {
   games: GameData[];
 }
 
-export type ViewState = 'landing' | 'dashboard' | 'upload' | 'analysis' | 'review' | 'challenge' | 'training' | 'visor' | 'deep_analysis';
+export type ViewState = 'landing' | 'dashboard' | 'upload' | 'analysis' | 'review' | 'challenge' | 'training' | 'visor' | 'deep_analysis' | 'profile';
 

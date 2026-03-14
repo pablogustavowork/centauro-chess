@@ -15,14 +15,16 @@ import { fetchLichessGames } from './services/lichessService';
 import { saveGame, getUserGames } from './services/gameService';
 import Sidebar from './components/Sidebar';
 import DeepAnalysisReport from './components/DeepAnalysisReport';
+import PlayerProfile from './components/PlayerProfile';
 
-import { Layout, FileText, X, Activity, BarChart3 } from 'lucide-react';
+import { Layout, FileText, X, Activity, BarChart3, Menu } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 
 const MainApp: React.FC = () => {
   const { user, profile, loading, signInWithGoogle, signOut, signInWithEmail, signUpWithEmail } = useAuth();
   const [view, setView] = useState<ViewState>('landing');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Local state for game logic
   const [history, setHistory] = useState<GameData[]>([]);
@@ -186,8 +188,18 @@ const MainApp: React.FC = () => {
 
   return (
     <div className="flex bg-slate-950 text-slate-200 font-sans selection:bg-blue-500/30 h-screen overflow-hidden">
+      {/* Mobile Backdrop Overlay */}
+      {isSidebarOpen && (
+        <div 
+          className="md:hidden fixed inset-0 bg-black/60 z-40 backdrop-blur-sm transition-opacity"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar Navigation */}
       <Sidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
         currentView={view}
         onNavigate={(viewId) => {
           if (viewId === 'dashboard') {
@@ -230,8 +242,21 @@ const MainApp: React.FC = () => {
       {/* Main Content Area */}
       <main className="flex-1 h-full overflow-y-auto relative bg-slate-950">
 
-        {/* Mobile Header (optional, for responsive later) */}
-        {/* <div className="md:hidden ...">CentaUros Mobile</div> */}
+        {/* Mobile Header */}
+        <div className="md:hidden flex items-center justify-between p-4 bg-slate-900 border-b border-slate-800 sticky top-0 z-30 shadow-md">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded bg-blue-600 flex items-center justify-center">
+              <span className="font-serif text-xl font-bold text-white">♟</span>
+            </div>
+            <span className="font-bold text-white">CentaUros</span>
+          </div>
+          <button 
+            onClick={() => setIsSidebarOpen(true)}
+            className="text-slate-400 hover:text-white bg-slate-800 p-2 rounded-lg"
+          >
+            <Menu className="w-6 h-6" />
+          </button>
+        </div>
 
         <div className="p-0">
           {/* View Container - Removed extra padding since views handle it, or add global padding here */}
@@ -395,6 +420,11 @@ const MainApp: React.FC = () => {
                 setView('review');
               }}
             />
+          )}
+
+          {/* VIEW: PROFILE */}
+          {view === 'profile' && (
+            <PlayerProfile profile={currentProfile} />
           )}
 
         </div>

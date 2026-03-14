@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Home, FlaskConical, Dumbbell, FileText, Settings, Plus, LogOut, LayoutGrid, Activity } from 'lucide-react';
+import { Home, FlaskConical, Dumbbell, FileText, Settings, Plus, LogOut, LayoutGrid, Activity, X, User } from 'lucide-react';
 import { UserProfile } from '../types';
 
 interface SidebarProps {
@@ -10,21 +10,29 @@ interface SidebarProps {
     onSignOut: () => void;
     profile: UserProfile;
     userAvatar?: string;
+    isOpen: boolean;
+    onClose: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, onNewGame, onSignOut, profile, userAvatar }) => {
+const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, onNewGame, onSignOut, profile, userAvatar, isOpen, onClose }) => {
 
     const menuItems = [
         { id: 'dashboard', label: 'Inicio', icon: Home },
+        { id: 'profile', label: 'Mi Perfil', icon: User },
         { id: 'analysis', label: 'El Laboratorio', icon: FlaskConical }, // Direct to Upload/Analysis
         { id: 'training', label: 'El Gimnasio', icon: Dumbbell },
         { id: 'visor', label: 'Visor PGN', icon: FileText },
         { id: 'deep_analysis', label: 'Reporte Lichess', icon: Activity },
-        // { id: 'settings', label: 'Ajustes', icon: Settings }, // Future
     ];
 
     return (
-        <div className="w-64 h-screen bg-slate-900 border-r border-slate-800 flex flex-col flex-shrink-0 relative z-50">
+        <div className={`fixed inset-y-0 left-0 transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0 transition duration-200 ease-in-out z-50 w-64 h-screen bg-slate-900 border-r border-slate-800 flex flex-col flex-shrink-0`}>
+            {/* Mobile Close Button */}
+            <div className="md:hidden absolute top-4 right-4 z-50">
+                <button onClick={onClose} className="text-slate-400 hover:text-white bg-slate-800 p-1 rounded-full">
+                    <X className="w-5 h-5" />
+                </button>
+            </div>
             {/* Profile Section */}
             <div className="p-6 border-b border-slate-800 flex items-center gap-4">
                 <div className="relative">
@@ -52,7 +60,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, onNewGame, o
                     return (
                         <button
                             key={item.id}
-                            onClick={() => onNavigate(item.id)}
+                            onClick={() => { onNavigate(item.id); onClose(); }}
                             className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${isActive
                                 ? 'bg-blue-600/10 text-blue-400 border border-blue-600/20'
                                 : 'text-slate-400 hover:bg-slate-800 hover:text-white'
@@ -68,14 +76,14 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, onNewGame, o
             {/* Footer Actions */}
             <div className="p-4 border-t border-slate-800 space-y-4">
                 <button
-                    onClick={onNewGame}
+                    onClick={() => { onNewGame(); onClose(); }}
                     className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2 transition-transform hover:scale-[1.02]"
                 >
                     <Plus className="w-5 h-5" /> Nueva Partida
                 </button>
 
                 <button
-                    onClick={onSignOut}
+                    onClick={() => { onSignOut(); onClose(); }}
                     className="w-full flex items-center justify-center gap-2 text-slate-500 hover:text-red-400 text-xs py-2 transition-colors"
                 >
                     <LogOut className="w-4 h-4" /> Cerrar Sesión
