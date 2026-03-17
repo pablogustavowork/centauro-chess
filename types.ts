@@ -101,3 +101,64 @@ export interface BatchAnalysisResult {
 
 export type ViewState = 'landing' | 'dashboard' | 'upload' | 'analysis' | 'review' | 'challenge' | 'training' | 'visor' | 'deep_analysis' | 'profile';
 
+// --- COGNITIVE ENGINE V2 TYPES ---
+
+export enum CognitiveCause {
+  CEGUERA_TACTICA = 'Ceguera táctica (no vio amenaza)',
+  CALCULO_INCOMPLETO = 'Cálculo incompleto (variante corta)',
+  MALA_EVALUACION = 'Mala evaluación de la posición',
+  PRESION_TIEMPO = 'Error bajo presión de tiempo',
+  DESCONOCIMIENTO_APERTURA = 'Falta de conocimiento teórico',
+  FALTA_PLAN = 'Ausencia de plan estratégico',
+  IMPULSIVIDAD = 'Jugada impulsiva/rápida'
+}
+
+export enum Severity {
+  LEVE = 'Leve (Imprecisión menor)',
+  MODERADA = 'Moderada (Error posicional/táctico recuperable)',
+  GRAVE = 'Grave (Pérdida de material o ventaja decisiva)',
+  DECISIVA = 'Decisiva (Blunder que pierde la partida)'
+}
+
+export interface MomentFeatures {
+  engineEvalDelta: number; // CPL
+  materialLost: number; // e.g., 3 for a piece
+  tacticalComplexity: number; // Heuristic measure (e.g., number of legal captures possible)
+  gamePhase: 'apertura' | 'medio_juego' | 'final';
+  timeAvailableMs?: number; // Time left on clock if available
+  timeSpentMs?: number; // Time spent on the move
+}
+
+export interface EnrichedCriticalMoment extends CriticalMoment {
+  features: MomentFeatures;
+  cognitiveCause: CognitiveCause;
+  severity: Severity;
+  cognitiveScore: number; // A composite score calculating how bad this is for learning
+}
+
+export interface CognitiveProfile {
+  recurrentCauses: Record<string, number>; // Maps CognitiveCause to frequency/score
+  recurrentTechnical: Record<string, number>; // Maps ErrorType to frequency/score
+  weakestPhase: string;
+  averageSeverity: number;
+}
+
+export interface TrainingPriority {
+  cause: CognitiveCause;
+  technicalType: ErrorType;
+  importanceScore: number; // Higher means train this first
+  description: string;
+}
+
+export interface TrainingPlan {
+  priorities: TrainingPriority[];
+  recommendedExercises: any[]; // Placeholder for actual exercise references
+}
+
+export interface CognitiveAnalysisResult {
+  gamesAnalysis: { gameId: string; pgn: string; criticalMoments: EnrichedCriticalMoment[] }[];
+  playerProfile: CognitiveProfile;
+  recurrentErrors: Record<string, number>; // Technical errors aggregation
+  trainingPriorities: TrainingPriority[];
+  trainingPlan: TrainingPlan;
+}

@@ -304,12 +304,10 @@ export const analyzeBatch = async (
 ): Promise<BatchAnalysisResult> => {
   const games: GameData[] = [];
   const accuracyTrend: number[] = [];
-  const errorDistribution: { [key in ErrorType]: number } = {
-    [ErrorType.TACTICAL_GRAVE]: 0,
-    [ErrorType.POSITIONAL_STRONG]: 0,
-    [ErrorType.OPENING_IMPRECISION]: 0,
-    [ErrorType.MINOR]: 0
-  };
+  const errorDistribution = Object.values(ErrorType).reduce((acc, val) => {
+    acc[val] = 0;
+    return acc;
+  }, {} as { [key in ErrorType]: number });
 
   let totalCplSum = 0;
 
