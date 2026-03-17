@@ -18,11 +18,12 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, onNewGame, o
 
     const menuItems = [
         { id: 'dashboard', label: 'Inicio', icon: Home },
-        { id: 'profile', label: 'Mi Perfil', icon: User },
-        { id: 'analysis', label: 'El Laboratorio', icon: FlaskConical }, // Direct to Upload/Analysis
-        { id: 'training', label: 'El Gimnasio', icon: Dumbbell },
+        { id: 'upload', label: 'Nueva partida', icon: Plus, action: onNewGame },
+        { id: 'deep_analysis', label: 'de Lichess', icon: Activity },
+        { id: 'profile', label: 'Perfil', icon: User },
+        { id: 'analysis', label: 'Laboratorio', icon: FlaskConical },
+        { id: 'training', label: 'Gimnasio', icon: Dumbbell },
         { id: 'visor', label: 'Visor PGN', icon: FileText },
-        { id: 'deep_analysis', label: 'Reporte Lichess', icon: Activity },
     ];
 
     return (
@@ -55,12 +56,14 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, onNewGame, o
             <nav className="flex-1 p-4 space-y-2">
                 {menuItems.map((item) => {
                     const Icon = item.icon;
-                    const isActive = currentView === item.id || (item.id === 'analysis' && currentView === 'upload'); // Highlight analysis for upload too
+                    // For analysis we kept the highlight when in upload view, but now upload is a separate tab.
+                    // We can just use exact match for isActive.
+                    const isActive = currentView === item.id || (item.id === 'analysis' && currentView === 'analysis_results');
 
                     return (
                         <button
                             key={item.id}
-                            onClick={() => { onNavigate(item.id); onClose(); }}
+                            onClick={() => { item.action ? item.action() : onNavigate(item.id); onClose(); }}
                             className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all ${isActive
                                 ? 'bg-blue-600/10 text-blue-400 border border-blue-600/20'
                                 : 'text-slate-400 hover:bg-slate-800 hover:text-white'
@@ -75,13 +78,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate, onNewGame, o
 
             {/* Footer Actions */}
             <div className="p-4 border-t border-slate-800 space-y-4">
-                <button
-                    onClick={() => { onNewGame(); onClose(); }}
-                    className="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2 transition-transform hover:scale-[1.02]"
-                >
-                    <Plus className="w-5 h-5" /> Nueva Partida
-                </button>
-
                 <button
                     onClick={() => { onSignOut(); onClose(); }}
                     className="w-full flex items-center justify-center gap-2 text-slate-500 hover:text-red-400 text-xs py-2 transition-colors"
