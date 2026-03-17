@@ -32,7 +32,7 @@ const PlayerProfile: React.FC<PlayerProfileProps> = ({ profile, history = [] }) 
   const { playerProfile, recurrentErrors, trainingPriorities } = cognitiveData;
 
   // Format Technical Data for Radar Chart
-  const technicalKeys = ['táctica', 'estrategia', 'apertura', 'finales'];
+  const technicalKeys = ['apertura', 'táctica', 'cálculo', 'estrategia', 'defensa', 'manejo del tiempo', 'finales'];
   const radarData = technicalKeys.map(key => ({
     subject: key.charAt(0).toUpperCase() + key.slice(1),
     A: 100 - (playerProfile.recurrentTechnical[key] || 0) * 15, // Simple heuristic: start 100, subtract for each error
