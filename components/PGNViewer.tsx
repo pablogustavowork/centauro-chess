@@ -8,9 +8,10 @@ import { initEngine, evaluatePosition, EngineEvaluation } from '../services/anal
 interface PGNViewerProps {
     onBack: () => void;
     initialPgn?: string;
+    savedGames?: any[]; // using any for now, since GameData is in types
 }
 
-const PGNViewer: React.FC<PGNViewerProps> = ({ onBack, initialPgn }) => {
+const PGNViewer: React.FC<PGNViewerProps> = ({ onBack, initialPgn, savedGames }) => {
     const iframeRef = useRef<HTMLIFrameElement>(null);
     const [gameState, setGameState] = useState(new Chess());
     const [currentPly, setCurrentPly] = useState<number>(0);
@@ -253,6 +254,7 @@ const PGNViewer: React.FC<PGNViewerProps> = ({ onBack, initialPgn }) => {
 
             {/* LEFT: Opening Library */}
             <OpeningLibrary
+                savedGames={savedGames}
                 onLoadOpening={(pgn) => {
                     loadPgn(pgn);
                     setMode('view');

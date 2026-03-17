@@ -10,6 +10,7 @@ interface Opening {
 }
 
 interface OpeningLibraryProps {
+    savedGames?: any[];
     onLoadOpening: (pgn: string) => void;
     onImportPgn: () => void;
 }
@@ -30,18 +31,34 @@ const OPENINGS_DB: Opening[] = [
     { category: "Defensas Indias", name: "Defensa India de Rey", eco: "E60", pgn: '[Event "KID"]\n[Site "?"]\n[Date "????.??.??"]\n[Round "?"]\n[White "?"]\n[Black "?"]\n[Result "*"]\n1. d4 Nf6 2. c4 g6 3. Nc3 Bg7 *' },
 ];
 
-const OpeningLibrary: React.FC<OpeningLibraryProps> = ({ onLoadOpening, onImportPgn }) => {
+const OpeningLibrary: React.FC<OpeningLibraryProps> = ({ onLoadOpening, onImportPgn, savedGames }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({
-        "Juegos Abiertos (1.e4)": true
+        "Mis Partidas Guardadas": true,
+        "Juegos Abiertos (1.e4)": false
     });
 
     const toggleCategory = (cat: string) => {
         setExpandedCategories(prev => ({ ...prev, [cat]: !prev[cat] }));
     };
 
+    // Dynamic DB assembly
+    const allOpenings = React.useMemo(() => {
+        let list = [...OPENINGS_DB];
+        if (savedGames && savedGames.length > 0) {
+            const userOpe = savedGames.map(g => ({
+                name: `${g.white} vs ${g.black}`,
+                pgn: g.pgn,
+                eco: g.result || g.date,
+                category: "Mis Partidas Guardadas"
+            }));
+            list = [...userOpe, ...list];
+        }
+        return list;
+    }, [savedGames]);
+
     // Filter logic
-    const filteredOpenings = OPENINGS_DB.filter(op =>
+    const filteredOpenings = allOpenings.filter(op =>
         op.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         op.eco.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -77,14 +94,14 @@ const OpeningLibrary: React.FC<OpeningLibraryProps> = ({ onLoadOpening, onImport
 
             {/* List */}
             <div className="flex-1 overflow-y-auto px-2 custom-scrollbar">
-                {Object.entries(grouped).map(([category, openings]) => (
+                {(Object.entries(grouped) as [string, Opening[]][]).map(([category, openings]) => (
                     <div key={category} className="mb-3">
                         <button
                             onClick={() => toggleCategory(category)}
                             className={`w-full flex items-center justify-between p-3 rounded-xl transition-all border ${expandedCategories[category] ? 'bg-slate-800 border-slate-700' : 'bg-slate-900/50 border-slate-800 hover:bg-slate-800/80'}`}
                         >
                             <div className="flex items-center gap-3">
-                                <div className={`w-2 h-2 rounded-full ${category.includes('Abiertos') ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : category.includes('Semi') ? 'bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.5)]' : category.includes('Cerrados') ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]' : 'bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.5)]'}`}></div>
+                                <div className={`w-2 h-2 rounded-full ${category === 'Mis Partidas Guardadas' ? 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.5)]' : category.includes('Abiertos') ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : category.includes('Semi') ? 'bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.5)]' : category.includes('Cerrados') ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]' : 'bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.5)]'}`}></div>
                                 <span className="text-sm font-bold text-slate-200">{category}</span>
                             </div>
                             {expandedCategories[category] ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-500" />}

@@ -3,8 +3,9 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { Puzzle, ErrorType } from "../types";
 
 // NOTA: En producción, nunca expongas keys en el cliente.
-// Para esta demo, asumimos que process.env.API_KEY está disponible.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+// Para esta demo, asumimos que VITE_GEMINI_API_KEY está disponible en el archivo .env.
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
+const ai = new GoogleGenAI({ apiKey });
 
 export const generateAdaptivePuzzles = async (errorType: ErrorType): Promise<Puzzle[]> => {
   const model = "gemini-2.5-flash";

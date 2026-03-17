@@ -1,8 +1,9 @@
 
 import React from 'react';
 import { UserProfile, GameData } from '../types';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area } from 'recharts';
-import { TrendingUp, Target, Upload, Play, Trophy, Eye, Clock, CheckCircle, ArrowRight, FlaskConical, Dumbbell } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts';
+import { TrendingUp, Target, Upload, Play, Trophy, Eye, Clock, CheckCircle, ArrowRight, FlaskConical, Dumbbell, Brain } from 'lucide-react';
+import { analyze_player_games } from '../services/cognitiveEngine';
 
 import CPLTrendGraph from './CPLTrendGraph';
 
@@ -40,6 +41,21 @@ const Dashboard: React.FC<DashboardProps> = ({
   const currentCpl = history.length > 0 ? history[history.length - 1].averageCpl : 18.5;
   const improvement = "-12%";
 
+  // Technical Radar Calculation
+  const cognitiveData = analyze_player_games(history);
+  const radarData = cognitiveData ? [
+    { subject: 'Táctica', A: cognitiveData.playerProfile.recurrentTechnical['táctica'] ? Math.max(0, 100 - cognitiveData.playerProfile.recurrentTechnical['táctica'] * 15) : 100 },
+    { subject: 'Cálculo', A: cognitiveData.playerProfile.recurrentTechnical['cálculo'] ? Math.max(0, 100 - cognitiveData.playerProfile.recurrentTechnical['cálculo'] * 15) : 100 },
+    { subject: 'Estrategia', A: cognitiveData.playerProfile.recurrentTechnical['estrategia'] ? Math.max(0, 100 - cognitiveData.playerProfile.recurrentTechnical['estrategia'] * 15) : 100 },
+    { subject: 'Defensa', A: cognitiveData.playerProfile.recurrentTechnical['defensa'] ? Math.max(0, 100 - cognitiveData.playerProfile.recurrentTechnical['defensa'] * 15) : 100 },
+    { subject: 'Apertura', A: cognitiveData.playerProfile.recurrentTechnical['apertura'] ? Math.max(0, 100 - cognitiveData.playerProfile.recurrentTechnical['apertura'] * 15) : 100 },
+    { subject: 'Finales', A: cognitiveData.playerProfile.recurrentTechnical['finales'] ? Math.max(0, 100 - cognitiveData.playerProfile.recurrentTechnical['finales'] * 15) : 100 },
+    { subject: 'Tiempo', A: cognitiveData.playerProfile.recurrentTechnical['manejo del tiempo'] ? Math.max(0, 100 - cognitiveData.playerProfile.recurrentTechnical['manejo del tiempo'] * 15) : 100 },
+  ] : [
+    { subject: 'Táctica', A: 80 }, { subject: 'Cálculo', A: 70 }, { subject: 'Estrategia', A: 60 },
+    { subject: 'Defensa', A: 90 }, { subject: 'Apertura', A: 85 }, { subject: 'Finales', A: 65 }, { subject: 'Tiempo', A: 75 }
+  ];
+
   return (
     <div className="p-8 max-w-[1600px] mx-auto space-y-8 animate-in fade-in">
 
@@ -59,29 +75,22 @@ const Dashboard: React.FC<DashboardProps> = ({
         <div className="lg:col-span-2">
           <CPLTrendGraph data={trendData} currentCpl={currentCpl} improvement={improvement} />
         </div>
-        <div className="space-y-6">
-          <div className="bg-slate-900 rounded-3xl p-6 border border-slate-800 flex flex-col justify-between h-[154px] relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-32 bg-orange-500/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 bg-orange-500/20 rounded-lg text-orange-500"><Target className="w-5 h-5" /></div>
-              <span className="text-slate-300 font-bold">Problemas Resueltos</span>
-            </div>
-            <div>
-              <div className="text-4xl font-black text-white">1,248</div>
-              <div className="text-sm text-slate-500 mt-1">+12 hoy</div>
-            </div>
-          </div>
-          <div className="bg-slate-900 rounded-3xl p-6 border border-slate-800 flex flex-col justify-between h-[154px] relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-32 bg-purple-500/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 bg-purple-500/20 rounded-lg text-purple-500"><Clock className="w-5 h-5" /></div>
-              <span className="text-slate-300 font-bold">Tiempo de Estudio</span>
-            </div>
-            <div>
-              <div className="text-4xl font-black text-white">42h</div>
-              <div className="text-sm text-slate-500 mt-1">Esta semana</div>
-            </div>
-          </div>
+        <div className="bg-slate-900 rounded-3xl p-6 border border-slate-800 flex flex-col items-center justify-center relative overflow-hidden h-full">
+           <div className="absolute top-0 right-0 p-32 bg-blue-500/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+           <h3 className="text-white font-bold text-sm mb-2 flex items-center gap-2 mt-2 w-full text-left pl-4">
+              <Brain className="w-4 h-4 text-blue-400" /> Huella Técnica
+           </h3>
+           <div className="w-full h-[220px]">
+             <ResponsiveContainer width="100%" height="100%">
+               <RadarChart cx="50%" cy="50%" outerRadius="65%" data={radarData}>
+                 <PolarGrid stroke="#1e293b" />
+                 <PolarAngleAxis dataKey="subject" tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 'bold' }} />
+                 <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                 <Tooltip contentStyle={{ backgroundColor: '#0f1420', borderColor: '#1e293b', borderRadius: '8px', color: '#fff' }} />
+                 <Radar name="Precisión" dataKey="A" stroke="#3b82f6" strokeWidth={2} fill="#3b82f6" fillOpacity={0.4} />
+               </RadarChart>
+             </ResponsiveContainer>
+           </div>
         </div>
       </div>
 
