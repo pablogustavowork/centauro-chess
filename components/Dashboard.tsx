@@ -16,13 +16,14 @@ interface DashboardProps {
   onReviewGame: (game: GameData) => void;
   onTrainGame: (game: GameData) => void;
   onDeepAnalysisStart: (username: string, options: { count: number, perfType: string }) => void;
+  onSeeAllHistory: () => void;
   isBatchAnalyzing: boolean;
   batchProgress: { current: number; total: number };
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ 
   profile, history, onUploadClick, onTrainingClick, onVisorClick, onDirectPgnLoad, 
-  onReviewGame, onTrainGame, onDeepAnalysisStart, isBatchAnalyzing, batchProgress 
+  onReviewGame, onTrainGame, onDeepAnalysisStart, onSeeAllHistory, isBatchAnalyzing, batchProgress 
 }) => {
   const [lichessUser, setLichessUser] = React.useState('');
   const [fetchCount, setFetchCount] = React.useState(20);
@@ -247,11 +248,10 @@ const Dashboard: React.FC<DashboardProps> = ({
       </div>
 
 
-      {/* Recent Activity */}
       <div className="mt-8">
         <h2 className="flex items-center justify-between text-xl font-bold text-white mt-8 mb-6">
           <span>Actividad Reciente</span>
-          <button className="text-sm text-blue-500 hover:text-blue-400 font-medium cursor-pointer">Ver todo</button>
+          <button onClick={onSeeAllHistory} className="text-sm text-blue-500 hover:text-blue-400 font-medium cursor-pointer">Ver todo</button>
         </h2>
 
         <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
@@ -259,7 +259,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             <div className="p-8 text-center text-slate-500">No hay actividad reciente. Juega una partida para empezar.</div>
           ) : (
             <div className="divide-y divide-slate-800">
-              {history.slice(0, 5).map((game) => (
+              {history.slice(0, 20).map((game) => (
                 <div key={game.id} className="p-4 flex items-center justify-between hover:bg-slate-800/50 transition-colors group">
                   <div className="flex items-center gap-4">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center ${game.averageCpl < 30 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>

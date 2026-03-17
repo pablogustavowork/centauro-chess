@@ -9,7 +9,8 @@ import {
   CognitiveAnalysisResult, 
   CognitiveProfile, 
   TrainingPriority, 
-  TrainingPlan 
+  TrainingPlan,
+  PlayingStyle
 } from '../types';
 
 /**
@@ -52,19 +53,22 @@ export function classify_technical_error(features: MomentFeatures): ErrorType {
 
 export function classify_cognitive_cause(features: MomentFeatures, technicalError: ErrorType): CognitiveCause {
   if (technicalError === ErrorType.TACTICA && features.materialLost > 0) {
-    return CognitiveCause.CEGUERA_TACTICA;
+    return CognitiveCause.NO_VIO_AMENAZA;
   }
   if (technicalError === ErrorType.ESTRATEGIA) {
     return CognitiveCause.MALA_EVALUACION;
   }
   if (technicalError === ErrorType.APERTURA) {
-    return CognitiveCause.DESCONOCIMIENTO_APERTURA;
+    return CognitiveCause.JUGADA_AUTOMATICA; // Aproximacion a jugar de memoria sin pensar
   }
   if (features.timeSpentMs && features.timeSpentMs < 3000 && features.engineEvalDelta > 100) {
-    return CognitiveCause.IMPULSIVIDAD;
+    return CognitiveCause.JUGO_RAPIDO;
   }
   if (features.timeAvailableMs && features.timeAvailableMs < 20000 && features.engineEvalDelta > 150) {
-    return CognitiveCause.PRESION_TIEMPO;
+    return CognitiveCause.COLAPSO_PRESION;
+  }
+  if (features.engineEvalDelta > 400 && features.gamePhase === 'apertura') {
+     return CognitiveCause.EXCESO_CONFIANZA;
   }
   
   return CognitiveCause.CALCULO_INCOMPLETO; // Default fallback for major errors
@@ -86,8 +90,8 @@ export function compute_error_score(features: MomentFeatures, errorType: ErrorTy
   else if (severity === Severity.GRAVE) baseScore += 15;
 
   // Errores repetitivos o sistémicos (ej. no ver táctica básica) puntúan alto
-  if (cause === CognitiveCause.CEGUERA_TACTICA) baseScore *= 1.5;
-  if (cause === CognitiveCause.IMPULSIVIDAD) baseScore *= 1.2;
+  if (cause === CognitiveCause.NO_VIO_AMENAZA) baseScore *= 1.5;
+  if (cause === CognitiveCause.JUGO_RAPIDO) baseScore *= 1.2;
 
   return Math.min(100, Math.round(baseScore));
 }
@@ -130,11 +134,27 @@ export function build_player_profile(pattern_stats: any): CognitiveProfile {
     }
   });
 
+  // Simple heuristic to determine playing style based on errors
+  let playingStyle = PlayingStyle.SOLIDO;
+  const tErr = pattern_stats.technicalCount[ErrorType.TACTICA] || 0;
+  const sErr = pattern_stats.technicalCount[ErrorType.ESTRATEGIA] || 0;
+  
+  if (tErr > sErr * 2) {
+      playingStyle = PlayingStyle.AGRESIVO; // Mucha tactica fallida -> juega sharp
+  } else if (sErr > tErr * 2) {
+      playingStyle = PlayingStyle.POSICIONAL; 
+  } else if ((pattern_stats.causesCount[CognitiveCause.EXCESO_CONFIANZA] || 0) > 2) {
+      playingStyle = PlayingStyle.ESPECULATIVO;
+  } else if (tErr > 3) {
+      playingStyle = PlayingStyle.TACTICO;
+  }
+
   return {
     recurrentCauses: pattern_stats.causesCount,
     recurrentTechnical: pattern_stats.technicalCount,
     weakestPhase,
-    averageSeverity: pattern_stats.momentCount > 0 ? pattern_stats.totalSeverity / pattern_stats.momentCount : 0
+    averageSeverity: pattern_stats.momentCount > 0 ? pattern_stats.totalSeverity / pattern_stats.momentCount : 0,
+    playingStyle
   };
 }
 
@@ -149,27 +169,61 @@ export function detect_recurrent_errors(pattern_stats: any): Record<string, numb
   return recurrent;
 }
 
-export function prioritize_training(recurrent_errors: Record<string, number>, profile: CognitiveProfile, pattern_stats: any): TrainingPriority[] {
+export function prioritize_training(analyzed_games: { gameId: string, pgn: string, criticalMoments: EnrichedCriticalMoment[] }[], profile: CognitiveProfile): TrainingPriority[] {
   const priorities: TrainingPriority[] = [];
 
-  // Buscar el emparejamiento más mortal: Causa + Carencia Técnica
-  Object.keys(profile.recurrentCauses).forEach(cause => {
-    Object.keys(profile.recurrentTechnical).forEach(tech => {
-       // Cálculo muy heurístico de prioridad
-       const freqCause = profile.recurrentCauses[cause] || 0;
-       const freqTech = profile.recurrentTechnical[tech] || 0;
-       
-       if (freqCause > 0 && freqTech > 0) {
-         let importance = (freqCause + freqTech) * 10;
-         
-         // Cast keys back to Enums to properly assign to interfaces
-         priorities.push({
-           cause: cause as CognitiveCause,
-           technicalType: tech as ErrorType,
-           importanceScore: importance,
-           description: `Entrenamiento principal para ${cause} resolviendo problemas de ${tech}`
-         });
-       }
+  // Group by Cause + ErrorType
+  const pairings: Record<string, {
+    count: number;
+    totalImpact: number;
+    totalSeveritySum: number;
+    cause: CognitiveCause;
+    tech: ErrorType;
+  }> = {};
+
+  analyzed_games.forEach(game => {
+    game.criticalMoments.forEach(m => {
+      const key = `${m.cognitiveCause}|${m.errorType}`;
+      if (!pairings[key]) {
+        pairings[key] = { count: 0, totalImpact: 0, totalSeveritySum: 0, cause: m.cognitiveCause, tech: m.errorType };
+      }
+      pairings[key].count += 1;
+      pairings[key].totalImpact += m.features.engineEvalDelta;
+      
+      let sevVal = 1;
+      if (m.severity === Severity.MODERADA) sevVal = 2;
+      else if (m.severity === Severity.GRAVE) sevVal = 3;
+      else if (m.severity === Severity.DECISIVA) sevVal = 4;
+      pairings[key].totalSeveritySum += sevVal;
+    });
+  });
+
+  Object.values(pairings).forEach(pair => {
+    // Subjective heuristic for ease of improvement based on cause
+    let ease = 5; 
+    if (pair.cause === CognitiveCause.JUGADA_AUTOMATICA || pair.cause === CognitiveCause.JUGO_RAPIDO) ease = 8; // Easier to fix (play slower)
+    if (pair.cause === CognitiveCause.CALCULO_INCOMPLETO || pair.cause === CognitiveCause.MALA_EVALUACION) ease = 3; // Harder to fix
+
+    const freq = pair.count;
+    const impact = pair.totalImpact / freq; // Average CPL
+    const avgSev = pair.totalSeveritySum / freq;
+    
+    // Cost heuristic
+    const cost = Math.round((impact / 10) * avgSev);
+
+    // Score calculation
+    const importance = Math.round((freq * 15) + cost + (ease * 3));
+
+    priorities.push({
+      cause: pair.cause,
+      technicalType: pair.tech,
+      importanceScore: importance,
+      description: `Entrenamiento para ${pair.cause} resolviendo problemas de ${pair.tech}`,
+      frequency: freq,
+      impact: Math.round(impact),
+      pressureFactor: pair.cause === CognitiveCause.COLAPSO_PRESION ? 1 : 0, // Simplified
+      easeOfImprovement: ease,
+      cost
     });
   });
 
@@ -224,7 +278,7 @@ export function analyze_player_games(games: GameData[]): CognitiveAnalysisResult
   const pattern_stats = aggregate_patterns(analyzed_games);
   const player_profile = build_player_profile(pattern_stats);
   const recurrent_errors = detect_recurrent_errors(pattern_stats);
-  const training_priorities = prioritize_training(recurrent_errors, player_profile, pattern_stats);
+  const training_priorities = prioritize_training(analyzed_games, player_profile);
   const training_plan = generate_training_plan(training_priorities);
 
   return {

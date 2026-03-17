@@ -1,15 +1,16 @@
 
 import React, { useEffect, useState, useRef } from 'react';
-import { ErrorType, Puzzle } from '../types';
+import { ErrorType, Puzzle, TrainingPriority } from '../types';
 import { generateAdaptivePuzzles } from '../services/geminiService';
 import { Loader2, Check, X, RefreshCw } from 'lucide-react';
 
 interface TacticalTrainingProps {
   errorType: ErrorType;
+  priority?: TrainingPriority;
   onClose: () => void;
 }
 
-const TacticalTraining: React.FC<TacticalTrainingProps> = ({ errorType, onClose }) => {
+const TacticalTraining: React.FC<TacticalTrainingProps> = ({ errorType, priority, onClose }) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const [puzzles, setPuzzles] = useState<Puzzle[]>([]);
@@ -128,6 +129,22 @@ const TacticalTraining: React.FC<TacticalTrainingProps> = ({ errorType, onClose 
               <div className="text-xl font-bold text-red-400 flex items-center gap-2">
                 <X className="w-5 h-5" /> {errorType}
               </div>
+              {priority && (
+                 <div className="mt-3 flex flex-wrap gap-3">
+                   <div className="bg-red-500/10 border border-red-500/20 px-3 py-1.5 rounded-lg">
+                      <div className="text-[10px] text-red-400/70 font-bold uppercase mb-0.5">Impacto</div>
+                      <div className="text-sm font-black text-red-400">-{priority.impact} cp</div>
+                   </div>
+                   <div className="bg-yellow-500/10 border border-yellow-500/20 px-3 py-1.5 rounded-lg">
+                      <div className="text-[10px] text-yellow-400/70 font-bold uppercase mb-0.5">Frecuencia</div>
+                      <div className="text-sm font-black text-yellow-400">{priority.frequency} rep</div>
+                   </div>
+                   <div className="bg-blue-500/10 border border-blue-500/20 px-3 py-1.5 rounded-lg">
+                      <div className="text-[10px] text-blue-400/70 font-bold uppercase mb-0.5">Mejora Esperada</div>
+                      <div className="text-sm font-black text-blue-400">{priority.easeOfImprovement}/10</div>
+                   </div>
+                 </div>
+              )}
             </div>
           </div>
 

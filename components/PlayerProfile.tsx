@@ -7,9 +7,10 @@ import { Settings, Share2, Brain, Target, AlertTriangle, Lightbulb, Activity, Za
 interface PlayerProfileProps {
   profile: UserProfile;
   history?: GameData[];
+  onStartTraining?: () => void;
 }
 
-const PlayerProfile: React.FC<PlayerProfileProps> = ({ profile, history = [] }) => {
+const PlayerProfile: React.FC<PlayerProfileProps> = ({ profile, history = [], onStartTraining }) => {
   // Generate cognitive profile dynamically based on history
   const cognitiveData = useMemo(() => {
     if (!history || history.length === 0) return null;
@@ -43,7 +44,7 @@ const PlayerProfile: React.FC<PlayerProfileProps> = ({ profile, history = [] }) 
   const causesData = Object.entries(playerProfile.recurrentCauses)
     .sort((a, b) => (b[1] as number) - (a[1] as number))
     .map(([cause, count]) => ({
-      name: cause.split(' ')[0],
+      name: cause.split(' ').slice(0, 2).join(' '),
       fullName: cause,
       frecuencia: count as number
     }));
@@ -104,13 +105,19 @@ const PlayerProfile: React.FC<PlayerProfileProps> = ({ profile, history = [] }) 
            </div>
 
            {/* Conceptual Metrics */}
-           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 lg:gap-12 text-center lg:text-left z-10 w-full lg:w-auto mt-6 lg:mt-0">
+           <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 lg:gap-8 text-center lg:text-left z-10 w-full lg:w-auto mt-6 lg:mt-0">
              <div className="bg-slate-900/50 p-4 rounded-2xl border border-slate-800/50">
                <div className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-2 flex items-center justify-center lg:justify-start gap-1">
-                 <Activity className="w-3 h-3 text-red-400" /> Índice de Riesgo
+                 <Zap className="w-3 h-3 text-purple-400" /> Estilo
+               </div>
+               <div className="text-xl font-bold text-white capitalize">{playerProfile.playingStyle}</div>
+             </div>
+             <div className="bg-slate-900/50 p-4 rounded-2xl border border-slate-800/50">
+               <div className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-2 flex items-center justify-center lg:justify-start gap-1">
+                 <Activity className="w-3 h-3 text-red-400" /> Riesgo
                </div>
                <div className="text-3xl font-black text-white">
-                 {playerProfile.averageSeverity.toFixed(1)} <span className="text-sm font-normal text-slate-500">/ 4.0</span>
+                 {playerProfile.averageSeverity.toFixed(1)}
                </div>
              </div>
              <div className="bg-slate-900/50 p-4 rounded-2xl border border-slate-800/50">
@@ -202,10 +209,24 @@ const PlayerProfile: React.FC<PlayerProfileProps> = ({ profile, history = [] }) 
                        </div>
                        <div className="flex-1">
                          <h3 className="text-white font-bold leading-tight mb-1">{tp.description}</h3>
-                         <div className="flex flex-wrap gap-2 mt-3">
-                           <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-800 text-slate-400 px-2 py-1 rounded">Causa: {tp.cause.split(' ')[0]}</span>
-                           <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-800 text-slate-400 px-2 py-1 rounded">Dominio: {tp.technicalType}</span>
-                         </div>
+                         <div className="flex flex-wrap gap-2 mt-3 mb-2">
+                            <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-800 text-slate-400 px-2 py-1 rounded">Causa: {tp.cause.split(' ')[0]}</span>
+                            <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-800 text-slate-400 px-2 py-1 rounded">Dominio: {tp.technicalType}</span>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-2">
+                             <div className="flex items-center gap-1 text-[11px] text-slate-300 bg-red-500/10 px-2 py-1 rounded-md border border-red-500/20">
+                                <AlertTriangle className="w-3 h-3 text-red-400" />
+                                Impacto: <strong className="text-red-400">-{tp.impact}cp</strong>
+                             </div>
+                             <div className="flex items-center gap-1 text-[11px] text-slate-300 bg-yellow-500/10 px-2 py-1 rounded-md border border-yellow-500/20">
+                                <Activity className="w-3 h-3 text-yellow-400" />
+                                Frecuencia: <strong className="text-yellow-400">x{tp.frequency}</strong>
+                             </div>
+                             <div className="flex items-center gap-1 text-[11px] text-slate-300 bg-blue-500/10 px-2 py-1 rounded-md border border-blue-500/20">
+                                <Zap className="w-3 h-3 text-blue-400" />
+                                Facilidad: <strong className="text-blue-400">{tp.easeOfImprovement}/10</strong>
+                             </div>
+                          </div>
                        </div>
                      </div>
                    </div>
@@ -220,7 +241,9 @@ const PlayerProfile: React.FC<PlayerProfileProps> = ({ profile, history = [] }) 
                </div>
 
                <div className="mt-8 pt-6 border-t border-slate-800">
-                 <button className="w-full bg-green-600 hover:bg-green-500 text-white font-black py-4 rounded-xl shadow-lg transition-transform transform hover:scale-[1.02] flex items-center justify-center gap-2">
+                 <button 
+                  onClick={onStartTraining}
+                  className="w-full bg-green-600 hover:bg-green-500 text-white font-black py-4 rounded-xl shadow-lg transition-transform transform hover:scale-[1.02] flex items-center justify-center gap-2">
                    <Target className="w-5 h-5" /> Iniciar Sesión de Gimnasio
                  </button>
                </div>

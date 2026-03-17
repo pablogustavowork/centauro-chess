@@ -305,8 +305,6 @@ const MainApp: React.FC = () => {
                   setView('review');
                 } else {
                   alert("No hay partidas para revisar. Por favor sube una partida o usa el botón '+' en la barra lateral.");
-                  // Maybe go to generic visor if they really want just a board?
-                  // But user requested "Revision de Partida" specifically.
                   setView('upload');
                 }
               }}
@@ -314,6 +312,7 @@ const MainApp: React.FC = () => {
               onReviewGame={handleReviewGame}
               onTrainGame={handleTrainGame}
               onDeepAnalysisStart={handleDeepAnalysisStart}
+              onSeeAllHistory={() => setView('visor')}
               isBatchAnalyzing={isBatchAnalyzing}
               batchProgress={batchProgress}
             />
@@ -419,7 +418,8 @@ const MainApp: React.FC = () => {
                 <button onClick={goToDashboard} className="text-slate-400 hover:text-white text-sm">← Volver al Dashboard</button>
               </div>
               <TacticalTraining
-                errorType={history.length > 0 ? history[0].dominantError : ErrorType.TACTICAL_GRAVE}
+                errorType={deepAnalysisResult?.trainingPlan?.priorities[0]?.technicalType || (history.length > 0 ? history[0].dominantError : ErrorType.TACTICAL_GRAVE)}
+                priority={deepAnalysisResult?.trainingPlan?.priorities[0]}
                 onClose={goToDashboard}
               />
             </div>
@@ -444,7 +444,11 @@ const MainApp: React.FC = () => {
 
           {/* VIEW: PROFILE */}
           {view === 'profile' && (
-            <PlayerProfile profile={currentProfile} history={history} />
+            <PlayerProfile 
+            profile={currentProfile} 
+            history={history} 
+            onStartTraining={() => setView('training')}
+          />
           )}
 
         </div>

@@ -109,13 +109,21 @@ export type ViewState = 'landing' | 'dashboard' | 'upload' | 'analysis' | 'revie
 // --- COGNITIVE ENGINE V2 TYPES ---
 
 export enum CognitiveCause {
-  CEGUERA_TACTICA = 'Ceguera táctica (no vio amenaza)',
-  CALCULO_INCOMPLETO = 'Cálculo incompleto (variante corta)',
-  MALA_EVALUACION = 'Mala evaluación de la posición',
-  PRESION_TIEMPO = 'Error bajo presión de tiempo',
-  DESCONOCIMIENTO_APERTURA = 'Falta de conocimiento teórico',
-  FALTA_PLAN = 'Ausencia de plan estratégico',
-  IMPULSIVIDAD = 'Jugada impulsiva/rápida'
+  NO_VIO_AMENAZA = 'No vio amenaza del rival',
+  CALCULO_INCOMPLETO = 'Calculo incompleto',
+  MALA_EVALUACION = 'Mala evaluacion',
+  JUGO_RAPIDO = 'Jugo demasiado rapido',
+  JUGADA_AUTOMATICA = 'Jugada automatica',
+  EXCESO_CONFIANZA = 'Exceso de confianza',
+  COLAPSO_PRESION = 'Colapso bajo presion'
+}
+
+export enum PlayingStyle {
+  AGRESIVO = 'Agresivo',
+  SOLIDO = 'Sólido',
+  TACTICO = 'Táctico',
+  POSICIONAL = 'Posicional',
+  ESPECULATIVO = 'Especulativo'
 }
 
 export enum Severity {
@@ -146,13 +154,20 @@ export interface CognitiveProfile {
   recurrentTechnical: Record<string, number>; // Maps ErrorType to frequency/score
   weakestPhase: string;
   averageSeverity: number;
+  playingStyle: PlayingStyle;
 }
 
 export interface TrainingPriority {
   cause: CognitiveCause;
   technicalType: ErrorType;
-  importanceScore: number; // Higher means train this first
+  importanceScore: number; // Final prioritized score
   description: string;
+  // Advanced metrics
+  frequency: number;       // How many times this pairing occurred
+  impact: number;          // Average CPL cost of these errors
+  pressureFactor: number;  // 0-1 scale of how much time pressure was involved
+  easeOfImprovement: number; // Subjective 1-10 scale based on cause
+  cost: number;            // Heuristic value (Severity + Impact)
 }
 
 export interface TrainingPlan {
