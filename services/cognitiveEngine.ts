@@ -196,21 +196,22 @@ export function analyze_player_games(games: GameData[]): CognitiveAnalysisResult
     const enriched_moments: EnrichedCriticalMoment[] = [];
 
     // Momentos generados por el motor en AnalysisService
-    for (const moment of game.criticalMoments) {
+    for (let i = 0; i < game.criticalMoments.length; i++) {
+      const moment = game.criticalMoments[i];
       const features = extract_features(moment, game);
       const error_type = classify_technical_error(features);
       const cognitive_cause = classify_cognitive_cause(features, error_type);
       const severity = classify_severity(features);
       const score = compute_error_score(features, error_type, cognitive_cause, severity);
 
-      enriched_moments.push({
-        ...moment, // Copiamos base properties
-        errorType: error_type, // Override with specific logic
-        features,
-        cognitiveCause: cognitive_cause,
-        severity,
-        cognitiveScore: score
-      });
+      // Mutate the original moment so UI components reading game.criticalMoments see it
+      moment.errorType = error_type;
+      moment.features = features;
+      moment.cognitiveCause = cognitive_cause;
+      moment.severity = severity;
+      moment.cognitiveScore = score;
+
+      enriched_moments.push(moment as EnrichedCriticalMoment);
     }
 
     analyzed_games.push({

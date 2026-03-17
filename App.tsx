@@ -164,17 +164,37 @@ const MainApp: React.FC = () => {
     setView('analysis_results');
   };
 
-  const handleDeepAnalysisStart = async (username: string) => {
+  const handleDeepAnalysisStart = async (username: string, options: { count: number, perfType: string } = { count: 20, perfType: 'all' }) => {
     if (!username) return;
     setIsBatchAnalyzing(true);
-    setBatchProgress({ current: 0, total: 20 });
+    setBatchProgress({ current: 0, total: options.count });
     
     try {
-      const pgns = await fetchLichessGames(username, 20);
+      // 1. Fetch filtered games
+      const pgns = await fetchLichessGames(username, options.count, options.perfType);
+      
+      // 2. Analyze all games (Cognitive analysis runs implicitly inside analyzeBatch)
       const result = await analyzeBatch(pgns, username, (current, total) => {
         setBatchProgress({ current, total });
       });
       
+      // 3. Save to database if user is logged in
+      if (user?.id) {
+        const savedGames = await Promise.all(
+           result.games.map(g => saveGame(g, user.id))
+        );
+        // Add new valid games to history
+        const validGames = savedGames.filter((g): g is GameData => !!g);
+        if (validGames.length > 0) {
+           setHistory(prev => {
+             // Avoid pure duplicates if testing
+             const existingIds = new Set(prev.map(p => p.id));
+             const newGames = validGames.filter(g => !existingIds.has(g.id));
+             return [...prev, ...newGames];
+           });
+        }
+      }
+
       setDeepAnalysisResult(result);
       setView('deep_analysis');
     } catch (error: any) {
@@ -424,7 +444,7 @@ const MainApp: React.FC = () => {
 
           {/* VIEW: PROFILE */}
           {view === 'profile' && (
-            <PlayerProfile profile={currentProfile} />
+            <PlayerProfile profile={currentProfile} history={history} />
           )}
 
         </div>

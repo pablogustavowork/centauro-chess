@@ -116,37 +116,70 @@ const DeepAnalysisReport: React.FC<DeepAnalysisReportProps> = ({ result, onBack,
                     </div>
                 </div>
 
-                {/* Error Distribution Table */}
-                <div className="bg-slate-900 rounded-3xl p-8 border border-slate-800">
-                    <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                        <AlertTriangle className="w-5 h-5 text-orange-500" />
-                        Distribución de Errores
-                    </h3>
+                {/* Error Distribution & Cognitive Causes */}
+                <div className="bg-slate-900 rounded-3xl p-8 border border-slate-800 flex flex-col space-y-8">
                     
-                    <div className="space-y-6">
-                        {errorStats.map((stat) => (
-                            <div key={stat.type}>
-                                <div className="flex justify-between items-center mb-2">
-                                    <span className="text-sm font-medium text-slate-300">{stat.type}</span>
-                                    <span className={`text-sm font-bold ${stat.color}`}>{stat.count}</span>
+                    {/* Technical Errors */}
+                    <div>
+                        <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                            <AlertTriangle className="w-5 h-5 text-orange-500" />
+                            Errores Técnicos
+                        </h3>
+                        <div className="space-y-4">
+                            {errorStats.map((stat) => (
+                                <div key={stat.type}>
+                                    <div className="flex justify-between items-center mb-1">
+                                        <span className="text-sm font-medium text-slate-300">{stat.type}</span>
+                                        <span className={`text-sm font-bold ${stat.color}`}>{stat.count}</span>
+                                    </div>
+                                    <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                                        <div 
+                                            className={`h-full ${stat.bg.replace('/10', '')} transition-all duration-1000`} 
+                                            style={{ width: `${(stat.count / Math.max(...errorStats.map(s => s.count), 1)) * 100}%` }}
+                                        ></div>
+                                    </div>
                                 </div>
-                                <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
-                                    <div 
-                                        className={`h-full ${stat.bg.replace('/10', '')} transition-all duration-1000`} 
-                                        style={{ width: `${(stat.count / Math.max(...errorStats.map(s => s.count), 1)) * 100}%` }}
-                                    ></div>
-                                </div>
-                            </div>
-                        ))}
+                            ))}
+                        </div>
                     </div>
 
-                    <div className="mt-12 p-6 bg-blue-600/10 rounded-2xl border border-blue-500/20">
+                    {/* Cognitive Causes (New Engine) */}
+                    {result.cognitiveAnalysis && (
+                        <div>
+                            <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                                <Activity className="w-5 h-5 text-purple-500" />
+                                Causas Cognitivas
+                            </h3>
+                            <div className="space-y-4">
+                                {Object.entries(result.cognitiveAnalysis.playerProfile.recurrentCauses)
+                                    .sort(([, a], [, b]) => (b as number) - (a as number))
+                                    .slice(0, 4)
+                                    .map(([cause, count]) => (
+                                    <div key={cause}>
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className="text-xs font-medium text-slate-400 uppercase tracking-wide truncate max-w-[200px]">{cause}</span>
+                                            <span className="text-xs font-bold text-purple-400">{count}</span>
+                                        </div>
+                                        <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                                            <div 
+                                                className="h-full bg-purple-500 transition-all duration-1000" 
+                                                style={{ width: `${((count as number) / Math.max(...Object.values(result.cognitiveAnalysis!.playerProfile.recurrentCauses) as number[], 1)) * 100}%` }}
+                                            ></div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Generative Coach Recommendation */}
+                    <div className="mt-auto p-6 bg-blue-600/10 rounded-2xl border border-blue-500/20">
                         <h4 className="text-white font-bold mb-2 flex items-center gap-2">
                             <Target className="w-4 h-4 text-blue-400" />
-                            Tu Debilidad Dominante
+                            Prioridad de Entrenamiento
                         </h4>
                         <p className="text-sm text-blue-300/80 leading-relaxed italic">
-                            "Has cometido mayoritariamente <strong>{result.dominantError}</strong>. Te recomendamos enfocarte en el Gimnasio con problemas de este tema."
+                            "{result.cognitiveAnalysis?.trainingPriorities[0]?.description || `Enfócate en mejorar el aspecto de ${result.dominantError}`}"
                         </p>
                     </div>
                 </div>

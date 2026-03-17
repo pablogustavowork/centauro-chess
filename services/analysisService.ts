@@ -1,6 +1,7 @@
 
 import { Chess } from 'chess.js';
 import { GameData, AnalysisResult, CriticalMoment, ErrorType, BatchAnalysisResult, EvalPoint } from '../types';
+import { analyze_player_games } from './cognitiveEngine';
 
 /**
  * SERVICIO DE ANÁLISIS REAL CON STOCKFISH
@@ -270,7 +271,7 @@ export const analyzeGame = async (pgn: string, playerId: string = 'Usuario'): Pr
       // Ordenar momentos críticos por gravedad
       const sortedCriticalMoments = criticalMoments.sort((a, b) => b.cpl - a.cpl).slice(0, 5);
 
-      resolve({
+      const gameData: GameData = {
         id: Math.random().toString(36).substr(2, 9),
         white,
         black,
@@ -279,13 +280,33 @@ export const analyzeGame = async (pgn: string, playerId: string = 'Usuario'): Pr
         pgn,
         averageCpl: userIsWhite ? avgCplWhite : avgCplBlack,
         criticalMoments: sortedCriticalMoments,
-        dominantError: ErrorType.MINOR, // Todo calculate properly
+        dominantError: ErrorType.MINOR,
 
         // New Data
         accuracy: { white: Math.round(accWhite), black: Math.round(accBlack) },
         evalHistory,
         classifications
+      };
+
+      // Enrich individual game using the cognitive engine
+      analyze_player_games([gameData]);
+      
+      // Compute single-game dominant error based on cognitive results
+      const typeCounts: Record<string, number> = {};
+      gameData.criticalMoments.forEach(m => {
+        typeCounts[m.errorType] = (typeCounts[m.errorType] || 0) + 1;
       });
+      let dominantError = ErrorType.MINOR;
+      let maxCount = -1;
+      Object.entries(typeCounts).forEach(([type, count]) => {
+        if (count > maxCount) {
+          maxCount = count;
+          dominantError = type as ErrorType;
+        }
+      });
+      gameData.dominantError = dominantError;
+
+      resolve(gameData);
 
 
 
@@ -343,6 +364,8 @@ export const analyzeBatch = async (
       }
   });
 
+  const cognitiveAnalysis = analyze_player_games(games);
+
   return {
     username,
     gamesCount: games.length,
@@ -350,7 +373,8 @@ export const analyzeBatch = async (
     dominantError,
     accuracyTrend,
     errorDistribution,
-    games
+    games,
+    cognitiveAnalysis
   };
 };
 

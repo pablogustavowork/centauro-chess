@@ -45,6 +45,10 @@ export interface CriticalMoment extends AnalysisResult {
   deltaElo: number;
   description: string;
   errorType: ErrorType;
+  cognitiveCause?: CognitiveCause;
+  severity?: Severity;
+  features?: MomentFeatures;
+  cognitiveScore?: number;
 }
 
 
@@ -97,6 +101,7 @@ export interface BatchAnalysisResult {
   accuracyTrend: number[]; // Accuracy of each game
   errorDistribution: { [key in ErrorType]: number };
   games: GameData[];
+  cognitiveAnalysis?: CognitiveAnalysisResult;
 }
 
 export type ViewState = 'landing' | 'dashboard' | 'upload' | 'analysis' | 'review' | 'challenge' | 'training' | 'visor' | 'deep_analysis' | 'profile';

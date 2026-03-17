@@ -15,7 +15,7 @@ interface DashboardProps {
   onDirectPgnLoad: (pgn: string, mode: 'analysis' | 'viewer') => void;
   onReviewGame: (game: GameData) => void;
   onTrainGame: (game: GameData) => void;
-  onDeepAnalysisStart: (username: string) => void;
+  onDeepAnalysisStart: (username: string, options: { count: number, perfType: string }) => void;
   isBatchAnalyzing: boolean;
   batchProgress: { current: number; total: number };
 }
@@ -25,6 +25,8 @@ const Dashboard: React.FC<DashboardProps> = ({
   onReviewGame, onTrainGame, onDeepAnalysisStart, isBatchAnalyzing, batchProgress 
 }) => {
   const [lichessUser, setLichessUser] = React.useState('');
+  const [fetchCount, setFetchCount] = React.useState(20);
+  const [perfType, setPerfType] = React.useState('all');
 
   // ... (Data calculation same as before)
   const trendData = history.length > 0
@@ -97,18 +99,41 @@ const Dashboard: React.FC<DashboardProps> = ({
                </p>
                
                <div className="flex flex-col sm:flex-row gap-3">
+                  <select 
+                    value={perfType} 
+                    onChange={(e) => setPerfType(e.target.value)}
+                    disabled={isBatchAnalyzing}
+                    className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-300 focus:outline-none focus:border-blue-500"
+                  >
+                    <option value="all">Todos los ritmos</option>
+                    <option value="blitz">Blitz</option>
+                    <option value="rapid">Rápido</option>
+                    <option value="classical">Clásico</option>
+                  </select>
+
+                  <select 
+                    value={fetchCount} 
+                    onChange={(e) => setFetchCount(Number(e.target.value))}
+                    disabled={isBatchAnalyzing}
+                    className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-300 focus:outline-none focus:border-blue-500"
+                  >
+                    <option value={5}>Últimas 5</option>
+                    <option value={10}>Últimas 10</option>
+                    <option value={20}>Últimas 20</option>
+                  </select>
+
                   <input 
                     type="text" 
                     placeholder="Tu usuario de Lichess" 
                     value={lichessUser}
                     onChange={(e) => setLichessUser(e.target.value)}
                     disabled={isBatchAnalyzing}
-                    className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors"
+                    className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors min-w-[200px]"
                   />
                   <button 
-                    onClick={() => onDeepAnalysisStart(lichessUser)}
+                    onClick={() => onDeepAnalysisStart(lichessUser, { count: fetchCount, perfType })}
                     disabled={isBatchAnalyzing || !lichessUser}
-                    className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold px-8 py-3 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95"
+                    className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold px-8 py-3 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 whitespace-nowrap"
                   >
                     {isBatchAnalyzing ? (
                       <>

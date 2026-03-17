@@ -1,279 +1,231 @@
-import React from 'react';
-import { UserProfile, PlayerStats } from '../types';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, AreaChart, Area, CartesianGrid } from 'recharts';
-import { Settings, Share2, AlertTriangle, Lightbulb } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { UserProfile, GameData } from '../types';
+import { analyze_player_games } from '../services/cognitiveEngine';
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Cell } from 'recharts';
+import { Settings, Share2, Brain, Target, AlertTriangle, Lightbulb, Activity, Zap } from 'lucide-react';
 
 interface PlayerProfileProps {
   profile: UserProfile;
-  stats?: PlayerStats;
+  history?: GameData[];
 }
 
-const defaultStats: PlayerStats = {
-  apertura: 75,
-  tactica: 92,
-  finales: 45,
-  estrategia: 82,
-  defensa: 48,
-  calculo: 88,
-  manejoTiempo: 60
-}; 
-// Added missing stats for mock.
+const PlayerProfile: React.FC<PlayerProfileProps> = ({ profile, history = [] }) => {
+  // Generate cognitive profile dynamically based on history
+  const cognitiveData = useMemo(() => {
+    if (!history || history.length === 0) return null;
+    return analyze_player_games(history);
+  }, [history]);
 
-const PlayerProfile: React.FC<PlayerProfileProps> = ({ profile, stats = defaultStats }) => {
-  // Mock Data for Bar Chart
-  const barData = [
-    { name: 'APERTURA', value: stats.apertura },
-    { name: 'TÁCTICA', value: stats.tactica },
-    { name: 'FINALES', value: stats.finales },
-    { name: 'ESTRATEGIA', value: stats.estrategia },
-    { name: 'VELOCIDAD', value: stats.manejoTiempo },
-  ];
+  // If no data, show placeholder or empty state
+  if (!cognitiveData) {
+    return (
+      <div className="min-h-screen bg-[#0f1420] text-slate-200 p-8 flex flex-col items-center justify-center animate-in fade-in">
+        <Brain className="w-16 h-16 text-slate-700 mb-6 animate-pulse" />
+        <h2 className="text-2xl font-bold text-white mb-2">Perfil en Construcción</h2>
+        <p className="text-slate-400 max-w-md text-center">
+          Juega o importa partidas para que CentaUrosChess construya tu modelo cognitivo y descubra cómo piensas realmente frente al tablero.
+        </p>
+      </div>
+    );
+  }
 
-  // Mock Data for Line Chart (Evolution)
-  const evolutionData = [
-    { month: 'M1', tactica: 55, promedio: 40 },
-    { month: 'M2', tactica: 65, promedio: 45 },
-    { month: 'M3', tactica: 75, promedio: 52 },
-    { month: 'M4', tactica: 80, promedio: 48 },
-    { month: 'M5', tactica: 72, promedio: 55 },
-    { month: 'M6', tactica: 92, promedio: 60 },
-  ];
+  const { playerProfile, recurrentErrors, trainingPriorities } = cognitiveData;
 
-  const overallScore = Math.round(
-    (stats.tactica + stats.apertura + stats.finales + stats.estrategia + stats.manejoTiempo) / 5
-  );
+  // Format Technical Data for Radar Chart
+  const technicalKeys = ['táctica', 'estrategia', 'apertura', 'finales'];
+  const radarData = technicalKeys.map(key => ({
+    subject: key.charAt(0).toUpperCase() + key.slice(1),
+    A: 100 - (playerProfile.recurrentTechnical[key] || 0) * 15, // Simple heuristic: start 100, subtract for each error
+    fullMark: 100,
+  })).map(data => ({ ...data, A: Math.max(0, data.A) })); // Cap at 0
+
+  // Format Cognitive Causes for Bar Chart
+  const causesData = Object.entries(playerProfile.recurrentCauses)
+    .sort((a, b) => (b[1] as number) - (a[1] as number))
+    .map(([cause, count]) => ({
+      name: cause.split(' ')[0],
+      fullName: cause,
+      frecuencia: count as number
+    }));
+
+  const weakestPhaseMap: Record<string, string> = {
+    apertura: 'Aperturas',
+    medio_juego: 'Medio Juego',
+    final: 'Finales'
+  };
+
+  const weakness = weakestPhaseMap[playerProfile.weakestPhase] || 'Medio Juego';
+  const overallScore = Math.max(30, 100 - playerProfile.averageSeverity * 15);
 
   return (
-    <div className="min-h-screen bg-[#0f1420] text-slate-200 font-sans p-6 md:p-8 animate-in fade-in zoom-in-95 duration-300">
-      
-      {/* Header Container */}
-      <div className="max-w-[1400px] mx-auto space-y-6">
+    <div className="min-h-screen bg-[#0f1420] text-slate-200 font-sans p-6 md:p-8 animate-in fade-in slide-in-from-bottom-4 duration-500 overflow-y-auto custom-scrollbar pb-24 h-full">
+      <div className="max-w-[1400px] mx-auto space-y-8">
         
-        {/* Top Navbar */}
-        <div className="flex justify-between items-center mb-8">
+        {/* Header & Settings */}
+        <div className="flex justify-between items-center">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded bg-blue-600 flex items-center justify-center shadow-[0_0_15px_rgba(37,99,235,0.5)]">
                <span className="font-serif text-xl font-bold text-white">♟</span>
             </div>
-            <span className="text-xl font-bold text-white tracking-tight">CentaUros Chess</span>
+            <span className="text-xl font-bold text-white tracking-tight">CentaUros Profile</span>
           </div>
           <div className="flex gap-3">
             <button className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 transition-colors">
-              <Settings className="w-5 h-5" />
+              <Share2 className="w-4 h-4" />
             </button>
             <button className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-300 transition-colors">
-              <Share2 className="w-5 h-5" />
+              <Settings className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* Profile Info Card */}
-        <div className="bg-[#161b28] border border-white/5 rounded-2xl p-6 md:p-8 flex flex-col md:flex-row items-center md:items-start gap-8 shadow-xl relative overflow-hidden">
-           {/* Glow effect */}
-           <div className="absolute top-0 right-0 p-32 bg-blue-500/5 rounded-full blur-[100px] -mr-16 -mt-16 pointer-events-none"></div>
+        {/* Identity & Main Dashboard */}
+        <div className="bg-[#161b28] border border-white/5 rounded-3xl p-8 flex flex-col lg:flex-row items-center justify-between gap-8 shadow-2xl relative overflow-hidden">
+           <div className="absolute top-0 right-0 p-40 bg-purple-500/5 rounded-full blur-[120px] pointer-events-none"></div>
            
-           {/* Avatar Area */}
-           <div className="flex-shrink-0 relative">
-             <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-cyan-400 p-1">
-               <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center overflow-hidden border-2 border-[#161b28]">
-                 <span className="text-3xl font-bold text-white">{profile.name.charAt(0).toUpperCase()}</span>
+           {/* Player Info */}
+           <div className="flex flex-col md:flex-row items-center gap-6 z-10 w-full lg:w-auto">
+             <div className="relative">
+               <div className="w-28 h-28 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 p-1">
+                 <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center border-4 border-[#161b28] overflow-hidden">
+                   <span className="text-4xl font-black text-white">{profile.name.charAt(0).toUpperCase()}</span>
+                 </div>
+               </div>
+               <div className="absolute bottom-1 right-2 w-6 h-6 bg-green-500 rounded-full border-4 border-[#161b28]"></div>
+             </div>
+             
+             <div className="text-center md:text-left">
+               <h1 className="text-4xl font-black text-white mb-2">{profile.name}</h1>
+               <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 text-sm">
+                 <span className="px-3 py-1 bg-purple-500/20 text-purple-300 font-bold rounded-full border border-purple-500/30">CentaUro Nivel {history.length}</span>
+                 <span className="text-slate-400 font-mono tracking-widest uppercase">Rank Global #422</span>
                </div>
              </div>
-             <div className="absolute bottom-1 right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-[#161b28]"></div>
            </div>
 
-           {/* Details */}
-           <div className="flex-1 text-center md:text-left">
-             <h1 className="text-3xl font-bold text-white mb-1">{profile.name}</h1>
-             <div className="text-blue-400 font-bold mb-2">Maestro Internacional</div>
-             <div className="text-slate-500 text-sm font-mono mb-6 md:mb-0">ID: 772934 | Rank #422 Global</div>
-           </div>
-
-           {/* Stats Summary */}
-           <div className="flex flex-col sm:flex-row gap-6 md:gap-12 w-full md:w-auto text-center md:text-left">
-             <div>
-               <div className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">ESTILO</div>
-               <div className="text-lg font-bold text-white">Agresor Táctico</div>
+           {/* Conceptual Metrics */}
+           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 lg:gap-12 text-center lg:text-left z-10 w-full lg:w-auto mt-6 lg:mt-0">
+             <div className="bg-slate-900/50 p-4 rounded-2xl border border-slate-800/50">
+               <div className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-2 flex items-center justify-center lg:justify-start gap-1">
+                 <Activity className="w-3 h-3 text-red-400" /> Índice de Riesgo
+               </div>
+               <div className="text-3xl font-black text-white">
+                 {playerProfile.averageSeverity.toFixed(1)} <span className="text-sm font-normal text-slate-500">/ 4.0</span>
+               </div>
              </div>
-             <div className="hidden sm:block w-px h-12 bg-white/10"></div>
-             <div>
-               <div className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">FORTALEZA PRINCIPAL</div>
-               <div className="text-lg font-bold text-white">Cálculo</div>
+             <div className="bg-slate-900/50 p-4 rounded-2xl border border-slate-800/50">
+               <div className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-2 flex items-center justify-center lg:justify-start gap-1">
+                 <Target className="w-3 h-3 text-orange-400" /> Talón de Aquiles
+               </div>
+               <div className="text-xl font-bold text-white capitalize">{weakness}</div>
              </div>
-             <div className="hidden sm:block w-px h-12 bg-white/10"></div>
-             <div>
-               <div className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">DEBILIDAD</div>
-               <div className="text-lg font-bold text-white">Técnica de Finales</div>
+             <div className="bg-slate-900/50 p-4 rounded-2xl border border-slate-800/50 relative overflow-hidden">
+               <div className="text-[10px] text-blue-300 uppercase font-bold tracking-wider mb-2">Desempeño Cognitivo</div>
+               <div className="text-4xl font-black text-blue-400" style={{ textShadow: '0 0 30px rgba(59,130,246,0.5)' }}>
+                 {Math.round(overallScore)}%
+               </div>
              </div>
            </div>
         </div>
 
-        {/* Main Grid */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        {/* 2-Column Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           
-          {/* Left Column (Charts) */}
-          <div className="xl:col-span-2 space-y-6">
-            
-            {/* Skills Radar / Bar Chart */}
-            <div className="bg-[#161b28] border border-white/5 rounded-2xl p-6 md:p-8 shadow-xl">
-              <div className="flex justify-between items-start mb-8">
-                <div>
-                  <h2 className="text-xl font-bold text-white mb-2">Índice de Rendimiento de Habilidades</h2>
-                  <p className="text-slate-400 text-sm">Rendimiento en tiempo real en 5 dimensiones clave</p>
-                </div>
-                <div className="text-right">
-                  <div className="text-4xl font-black text-blue-400" style={{ textShadow: '0 0 20px rgba(59,130,246,0.3)' }}>
-                    {overallScore}<span className="text-lg text-slate-500 font-normal">/100</span>
-                  </div>
-                  <div className="text-green-400 text-sm font-bold flex items-center justify-end gap-1 mt-1">
-                    <span className="text-xs">↗</span> +2.4%
-                  </div>
-                </div>
-              </div>
-
-              <div className="h-[250px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={barData} margin={{ top: 20, right: 0, left: -20, bottom: 0 }} barGap={8}>
-                    <XAxis 
-                      dataKey="name" 
-                      axisLine={false} 
-                      tickLine={false} 
-                      tick={{ fill: '#64748b', fontSize: 10, fontWeight: 'bold' }} 
-                      dy={10}
-                    />
-                    <YAxis hide domain={[0, 100]} />
-                    <Tooltip 
-                      cursor={{ fill: 'rgba(255,255,255,0.02)' }}
-                      contentStyle={{ backgroundColor: '#0f1420', borderColor: '#1e293b', borderRadius: '8px', color: '#fff' }}
-                    />
-                    <Bar dataKey="value" radius={[4, 4, 0, 0]} maxBarSize={60}>
-                       {barData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.value < 50 ? '#3b82f6' /* muted blue for low */ : '#3b82f6'} style={{ opacity: entry.value < 50 ? 0.6 : 1 }} />
-                       ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
-            {/* Evolution Line Chart */}
-            <div className="bg-[#161b28] border border-white/5 rounded-2xl p-6 md:p-8 shadow-xl">
-              <h2 className="text-xl font-bold text-white mb-6">Evolución de Habilidades (Últimos 6 Meses)</h2>
-              <div className="h-[250px] w-full relative">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={evolutionData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="colorTactica" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-                    <XAxis dataKey="month" hide />
-                    <YAxis hide domain={[0, 100]} />
-                    <Tooltip 
-                       contentStyle={{ backgroundColor: '#0f1420', borderColor: '#1e293b', borderRadius: '8px' }}
-                       itemStyle={{ color: '#fff' }}
-                    />
-                    <Area type="monotone" dataKey="tactica" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorTactica)" />
-                    <Area type="monotone" dataKey="promedio" stroke="#64748b" strokeWidth={2} strokeDasharray="5 5" fill="none" />
-                  </AreaChart>
-                </ResponsiveContainer>
-                {/* Custom Legend */}
-                <div className="absolute bottom-0 left-0 flex gap-6 text-xs font-bold text-slate-500 uppercase">
-                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-blue-500"></div> Táctica</div>
-                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full border-2 border-slate-500 border-dashed"></div> Promedio General</div>
-                </div>
-              </div>
-            </div>
-
-          </div>
-
-          {/* Right Column (Errors & Coach) */}
-          <div className="space-y-6">
-            
-            {/* Recurrent Errors */}
-            <div className="bg-[#161b28] border border-white/5 rounded-2xl p-6 shadow-xl h-full flex flex-col">
-              <h2 className="flex items-center gap-2 text-xl font-bold text-white mb-6">
-                <AlertTriangle className="w-5 h-5 text-red-500" />
-                Ranking de Errores Recurrentes
+          {/* LEFT: Technical Radar & Stats */}
+          <div className="space-y-8">
+            <div className="bg-[#161b28] border border-white/5 rounded-3xl p-8 shadow-xl">
+              <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                <Brain className="w-5 h-5 text-blue-500" />
+                Huella Técnica
               </h2>
-
-              <div className="space-y-4 flex-1">
-                {/* Error Card 1 */}
-                <div className="bg-[#0f1420] border border-white/5 rounded-xl p-4">
-                  <div className="flex items-start gap-3">
-                    <span className="text-red-500 font-bold bg-red-500/10 px-2 rounded">#1</span>
-                    <div className="flex-1">
-                      <h4 className="text-white font-bold text-sm mb-1">Piezas colgadas bajo presión</h4>
-                      <p className="text-xs text-slate-500 mb-3">Ocurre en 24% de partidas blitz con &lt; 1min restante.</p>
-                      <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
-                        <div className="bg-red-500 h-full" style={{ width: '85%' }}></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Error Card 2 */}
-                <div className="bg-[#0f1420] border border-white/5 rounded-xl p-4">
-                  <div className="flex items-start gap-3">
-                    <span className="text-orange-500 font-bold bg-orange-500/10 px-2 rounded">#2</span>
-                    <div className="flex-1">
-                      <h4 className="text-white font-bold text-sm mb-1">Error de cálculo en intercambios</h4>
-                      <p className="text-xs text-slate-500 mb-3">Frecuente durante medios juegos complejos.</p>
-                      <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
-                        <div className="bg-orange-500 h-full" style={{ width: '60%' }}></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Error Card 3 */}
-                <div className="bg-[#0f1420] border border-white/5 rounded-xl p-4">
-                  <div className="flex items-start gap-3">
-                    <span className="text-yellow-500 font-bold bg-yellow-500/10 px-2 rounded">#3</span>
-                    <div className="flex-1">
-                      <h4 className="text-white font-bold text-sm mb-1">Defensa pasiva en finales</h4>
-                      <p className="text-xs text-slate-500 mb-3">Tendencia a posiciones perdidas en finales de torres.</p>
-                      <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
-                        <div className="bg-yellow-500 h-full" style={{ width: '40%' }}></div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+              <div className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
+                    <PolarGrid stroke="#1e293b" />
+                    <PolarAngleAxis dataKey="subject" tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 'bold' }} />
+                    <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
+                    <Tooltip contentStyle={{ backgroundColor: '#0f1420', borderColor: '#1e293b', borderRadius: '8px', color: '#fff' }} />
+                    <Radar name="Precisión" dataKey="A" stroke="#3b82f6" strokeWidth={3} fill="#3b82f6" fillOpacity={0.4} />
+                  </RadarChart>
+                </ResponsiveContainer>
               </div>
-
-              {/* Coach Insights */}
-              <div className="mt-6 bg-blue-500/10 border border-blue-500/20 rounded-xl p-5">
-                <div className="flex items-center gap-2 text-blue-400 font-bold text-[10px] uppercase tracking-wider mb-2">
-                  <Lightbulb className="w-3 h-3" /> Visión del Entrenador
-                </div>
-                <p className="text-sm text-blue-100/80 italic leading-relaxed">
-                  "{profile.name} shows elite tactical vision, but loses composure in time scrambles. Focused training on Lucena/Philidor positions is recommended."
-                </p>
+              <p className="text-slate-400 text-sm text-center mt-4">
+                Mapeo de tu resistencia y precisión técnica a lo largo de las distintas fases y dominios del juego.
+              </p>
+            </div>
+            
+            {/* Pedagogical Diagnosis (The "Why") */}
+            <div className="bg-gradient-to-br from-[#161b28] to-[#0f1420] border border-blue-500/20 rounded-3xl p-8 shadow-[0_0_30px_rgba(59,130,246,0.05)]">
+              <h2 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
+                <Zap className="w-5 h-5 text-yellow-500" />
+                Comportamiento Cognitivo
+              </h2>
+              <p className="text-slate-400 text-sm mb-6">¿Por qué cometes los errores? Este es el análisis de tu proceso de pensamiento subyacente.</p>
+              
+              <div className="space-y-5">
+                {causesData.slice(0, 3).map((cause, idx) => (
+                   <div key={idx} className="relative">
+                     <div className="flex justify-between items-end mb-2">
+                       <span className="text-sm font-bold text-slate-200 capitalize">{cause.fullName}</span>
+                       <span className="text-xs font-black text-yellow-500 bg-yellow-500/10 px-2 py-1 rounded">x{cause.frecuencia} incidentes</span>
+                     </div>
+                     <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden border border-slate-700/50">
+                       <div className="bg-gradient-to-r from-yellow-600 to-yellow-400 h-full shadow-[0_0_10px_rgba(234,179,8,0.5)]" style={{ width: `${(cause.frecuencia / causesData[0].frecuencia) * 100}%` }}></div>
+                     </div>
+                   </div>
+                ))}
+                {causesData.length === 0 && (
+                  <div className="text-slate-500 text-sm italic py-4">No se han detectado patrones cognitivos graves aún. ¡Sigue jugando de forma limpia!</div>
+                )}
               </div>
-
             </div>
           </div>
 
-        </div>
+          {/* RIGHT: Plan de Entrenamiento */}
+          <div className="space-y-8">
+            <div className="bg-[#161b28] border border-white/5 rounded-3xl p-8 shadow-xl h-full flex flex-col">
+               <h2 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
+                 <Lightbulb className="w-5 h-5 text-green-400" />
+                 Plan de Entrenamiento Dinámico
+               </h2>
+               <p className="text-slate-400 text-sm mb-8">Ejercicios personalizados generados a partir de tu diagnóstico cognitivo para maximizar la curva de aprendizaje.</p>
 
-        {/* Footer Stats summary */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pb-8">
-           <div className="bg-[#161b28] border border-white/5 rounded-xl p-5 shadow-lg">
-             <div className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">TASA DE VICTORIAS</div>
-             <div className="text-2xl font-bold text-white">58.4%</div>
-           </div>
-           <div className="bg-[#161b28] border border-white/5 rounded-xl p-5 shadow-lg">
-             <div className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">PARTIDAS JUGADAS</div>
-             <div className="text-2xl font-bold text-white">1,248</div>
-           </div>
-           {/* Contextual Status Bar */}
-           <div className="col-span-2 bg-[#0a0e17] border border-white/5 rounded-xl p-5 flex flex-wrap items-center justify-center md:justify-around gap-4 text-xs font-mono text-slate-400 uppercase tracking-widest">
-             <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-green-500"></div> Forma actual: Excelente</div>
-             <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-blue-500"></div> Elo máximo: 2450</div>
-             <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-purple-500"></div> Próximo Torneo: Centauros Masters</div>
-           </div>
+               <div className="space-y-4 flex-1">
+                 {trainingPriorities.map((tp, idx) => (
+                   <div key={idx} className="group relative bg-[#0a0e17] border border-slate-800 rounded-2xl p-5 hover:border-green-500/50 transition-all cursor-pointer overflow-hidden">
+                     {/* Hover glow */}
+                     <div className="absolute inset-0 bg-gradient-to-r from-green-500/0 via-green-500/5 to-green-500/0 opacity-0 group-hover:opacity-100 transition-opacity -translate-x-full group-hover:translate-x-full duration-1000"></div>
+                     
+                     <div className="flex items-start gap-4 relative z-10">
+                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black ${idx === 0 ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-slate-800 text-slate-500'}`}>
+                         #{idx + 1}
+                       </div>
+                       <div className="flex-1">
+                         <h3 className="text-white font-bold leading-tight mb-1">{tp.description}</h3>
+                         <div className="flex flex-wrap gap-2 mt-3">
+                           <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-800 text-slate-400 px-2 py-1 rounded">Causa: {tp.cause.split(' ')[0]}</span>
+                           <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-800 text-slate-400 px-2 py-1 rounded">Dominio: {tp.technicalType}</span>
+                         </div>
+                       </div>
+                     </div>
+                   </div>
+                 ))}
+
+                 {trainingPriorities.length === 0 && (
+                   <div className="flex flex-col items-center justify-center h-40 text-slate-500">
+                     <AlertTriangle className="w-8 h-8 mb-2 opacity-50" />
+                     <p>Juega más partidas para generar prioridades sólidas.</p>
+                   </div>
+                 )}
+               </div>
+
+               <div className="mt-8 pt-6 border-t border-slate-800">
+                 <button className="w-full bg-green-600 hover:bg-green-500 text-white font-black py-4 rounded-xl shadow-lg transition-transform transform hover:scale-[1.02] flex items-center justify-center gap-2">
+                   <Target className="w-5 h-5" /> Iniciar Sesión de Gimnasio
+                 </button>
+               </div>
+            </div>
+          </div>
         </div>
 
       </div>

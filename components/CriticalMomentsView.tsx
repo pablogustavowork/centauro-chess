@@ -144,10 +144,24 @@ const CriticalMomentsView: React.FC<CriticalMomentsViewProps> = ({ game, onStart
                 onClick={() => goToPly(moment.ply)}
               >
                 <div className="flex justify-between items-start mb-2">
-                  <span className="text-sm font-mono text-slate-400">Jugada {moment.moveNumber}</span>
-                  <span className="text-xs font-bold text-red-500 bg-red-950/30 px-2 py-1 rounded">
-                    -{moment.deltaElo} ELO
-                  </span>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-sm font-mono text-slate-400">Jugada {moment.moveNumber}</span>
+                    {moment.cognitiveCause && (
+                      <span className="text-[10px] font-bold text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20 max-w-[180px] truncate">
+                        {moment.cognitiveCause}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <span className="text-xs font-bold text-red-500 bg-red-950/30 px-2 py-1 rounded">
+                      -{moment.deltaElo} ELO
+                    </span>
+                    {moment.errorType && (
+                       <span className="text-[10px] text-orange-400 font-medium uppercase tracking-wider">
+                         {moment.errorType}
+                       </span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 text-sm mb-3">
                   <span className="text-slate-300">Tú: <strong className="text-red-400">{moment.movePlayed}</strong></span>

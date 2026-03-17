@@ -4,8 +4,11 @@
  * Handles fetching games from the Lichess API.
  */
 
-export const fetchLichessGames = async (username: string, count: number = 20): Promise<string[]> => {
-    const url = `https://lichess.org/api/games/user/${username}?max=${count}&pgnInJson=false&clocks=true&evals=false`;
+export const fetchLichessGames = async (username: string, count: number = 20, perfType: string = ''): Promise<string[]> => {
+    let url = `https://lichess.org/api/games/user/${username}?max=${count}&pgnInJson=false&clocks=true&evals=false`;
+    if (perfType && perfType !== 'all') {
+        url += `&perfType=${perfType}`;
+    }
     
     try {
         const response = await fetch(url, {
@@ -25,11 +28,6 @@ export const fetchLichessGames = async (username: string, count: number = 20): P
         }
 
         const text = await response.text();
-        
-        // PGN export from Lichess returns multiple games separated by double newlines
-        // We need to split them carefully. 
-        // A simple split by \n\n\n might work if Lichess follows that, 
-        // but often it's double space between games.
         
         // Robust split: search for [Event "..."] start of headers
         const games = text.split(/\n(?=\[Event )/).filter(g => g.trim().length > 0);
