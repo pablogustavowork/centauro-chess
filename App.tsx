@@ -91,7 +91,7 @@ const MainApp: React.FC = () => {
     try {
       const data = await analyzeGame(pgnInput, currentProfile.name);
 
-      setHistory(prev => [...prev, data]);
+      setHistory(prev => [data, ...prev]);
       setActiveGame(data);
       setView('review'); // Fix: Go to Review, not the loading screen 'analysis'
 
@@ -131,7 +131,7 @@ const MainApp: React.FC = () => {
       setIsAnalyzing(true);
       try {
         const data = await analyzeGame(pgn, currentProfile.name);
-        setHistory(prev => [...prev, data]);
+        setHistory(prev => [data, ...prev]);
         setActiveGame(data);
         setView('review');
 
@@ -190,7 +190,7 @@ const MainApp: React.FC = () => {
              // Avoid pure duplicates if testing
              const existingIds = new Set(prev.map(p => p.id));
              const newGames = validGames.filter(g => !existingIds.has(g.id));
-             return [...prev, ...newGames];
+             return [...newGames, ...prev];
            });
         }
       }
@@ -227,7 +227,7 @@ const MainApp: React.FC = () => {
           } else if (viewId === 'analysis') {
             // "El Laboratorio" -> Cases Criticos
             if (history.length > 0) {
-              setActiveGame(history[history.length - 1]);
+              setActiveGame(history[0]);
               setView('analysis_results');
             } else {
               alert("No hay partidas. Sube una para entrar al laboratorio.");
@@ -236,7 +236,7 @@ const MainApp: React.FC = () => {
           } else if (viewId === 'visor') {
             // "Visor PGN" -> Revision
             if (history.length > 0) {
-              setActiveGame(history[history.length - 1]);
+              setActiveGame(history[0]);
               setView('review');
             } else {
               alert("No hay partidas para revisar.");
@@ -289,7 +289,7 @@ const MainApp: React.FC = () => {
               onUploadClick={() => {
                 // "Laboratorio" -> "Casos Criticos" (Analysis Results)
                 if (history.length > 0) {
-                  setActiveGame(history[history.length - 1]);
+                  setActiveGame(history[0]);
                   setView('analysis_results');
                 } else {
                   // Fallback if no history
@@ -301,7 +301,7 @@ const MainApp: React.FC = () => {
               onVisorClick={() => {
                 // "Visor PGN" -> "Revisión de Partida" (Review)
                 if (history.length > 0) {
-                  setActiveGame(history[history.length - 1]);
+                  setActiveGame(history[0]);
                   setView('review');
                 } else {
                   alert("No hay partidas para revisar. Por favor sube una partida o usa el botón '+' en la barra lateral.");
@@ -419,7 +419,7 @@ const MainApp: React.FC = () => {
                 <button onClick={goToDashboard} className="text-slate-400 hover:text-white text-sm">← Volver al Dashboard</button>
               </div>
               <TacticalTraining
-                errorType={history.length > 0 ? history[history.length - 1].dominantError : ErrorType.TACTICAL_GRAVE}
+                errorType={history.length > 0 ? history[0].dominantError : ErrorType.TACTICAL_GRAVE}
                 onClose={goToDashboard}
               />
             </div>
